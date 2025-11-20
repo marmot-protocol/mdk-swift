@@ -597,6 +597,11 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getRelays(mlsGroupId: String) throws  -> [String]
     
     /**
+     * Get a welcome by event ID
+     */
+    func getWelcome(eventId: String) throws  -> Welcome?
+    
+    /**
      * Create a proposal to leave the group
      */
     func leaveGroup(mlsGroupId: String) throws  -> AddMembersResult
@@ -630,6 +635,11 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Update the current member's leaf node in an MLS group
      */
     func selfUpdate(mlsGroupId: String) throws  -> AddMembersResult
+    
+    /**
+     * Sync group metadata from MLS
+     */
+    func syncGroupMetadataFromMls(mlsGroupId: String) throws 
     
     /**
      * Update group data (name, description, image, relays, admins)
@@ -851,6 +861,18 @@ open func getRelays(mlsGroupId: String)throws  -> [String]  {
 }
     
     /**
+     * Get a welcome by event ID
+     */
+open func getWelcome(eventId: String)throws  -> Welcome?  {
+    return try  FfiConverterOptionTypeWelcome.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_get_welcome(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(eventId),$0
+    )
+})
+}
+    
+    /**
      * Create a proposal to leave the group
      */
 open func leaveGroup(mlsGroupId: String)throws  -> AddMembersResult  {
@@ -932,6 +954,17 @@ open func selfUpdate(mlsGroupId: String)throws  -> AddMembersResult  {
         FfiConverterString.lower(mlsGroupId),$0
     )
 })
+}
+    
+    /**
+     * Sync group metadata from MLS
+     */
+open func syncGroupMetadataFromMls(mlsGroupId: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_sync_group_metadata_from_mls(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),$0
+    )
+}
 }
     
     /**
@@ -1424,6 +1457,220 @@ public func FfiConverterTypeGroupDataUpdate_lower(_ value: GroupDataUpdate) -> R
 
 
 /**
+ * Prepared group image data ready for upload to Blossom
+ */
+public struct GroupImageUpload: Equatable, Hashable {
+    /**
+     * Encrypted image data (ready to upload to Blossom)
+     */
+    public var encryptedData: Data
+    /**
+     * SHA256 hash of encrypted data (verify against Blossom response)
+     */
+    public var encryptedHash: Data
+    /**
+     * Encryption key (store in extension)
+     */
+    public var imageKey: Data
+    /**
+     * Encryption nonce (store in extension)
+     */
+    public var imageNonce: Data
+    /**
+     * Derived keypair secret for Blossom authentication (hex encoded)
+     */
+    public var uploadSecretKey: String
+    /**
+     * Original image size before encryption
+     */
+    public var originalSize: UInt64
+    /**
+     * Size after encryption
+     */
+    public var encryptedSize: UInt64
+    /**
+     * Validated and canonical MIME type
+     */
+    public var mimeType: String
+    /**
+     * Image dimensions (width, height) if available
+     */
+    public var dimensions: ImageDimensions?
+    /**
+     * Blurhash for preview if generated
+     */
+    public var blurhash: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Encrypted image data (ready to upload to Blossom)
+         */encryptedData: Data, 
+        /**
+         * SHA256 hash of encrypted data (verify against Blossom response)
+         */encryptedHash: Data, 
+        /**
+         * Encryption key (store in extension)
+         */imageKey: Data, 
+        /**
+         * Encryption nonce (store in extension)
+         */imageNonce: Data, 
+        /**
+         * Derived keypair secret for Blossom authentication (hex encoded)
+         */uploadSecretKey: String, 
+        /**
+         * Original image size before encryption
+         */originalSize: UInt64, 
+        /**
+         * Size after encryption
+         */encryptedSize: UInt64, 
+        /**
+         * Validated and canonical MIME type
+         */mimeType: String, 
+        /**
+         * Image dimensions (width, height) if available
+         */dimensions: ImageDimensions?, 
+        /**
+         * Blurhash for preview if generated
+         */blurhash: String?) {
+        self.encryptedData = encryptedData
+        self.encryptedHash = encryptedHash
+        self.imageKey = imageKey
+        self.imageNonce = imageNonce
+        self.uploadSecretKey = uploadSecretKey
+        self.originalSize = originalSize
+        self.encryptedSize = encryptedSize
+        self.mimeType = mimeType
+        self.dimensions = dimensions
+        self.blurhash = blurhash
+    }
+
+    
+}
+
+#if compiler(>=6)
+extension GroupImageUpload: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGroupImageUpload: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GroupImageUpload {
+        return
+            try GroupImageUpload(
+                encryptedData: FfiConverterData.read(from: &buf), 
+                encryptedHash: FfiConverterData.read(from: &buf), 
+                imageKey: FfiConverterData.read(from: &buf), 
+                imageNonce: FfiConverterData.read(from: &buf), 
+                uploadSecretKey: FfiConverterString.read(from: &buf), 
+                originalSize: FfiConverterUInt64.read(from: &buf), 
+                encryptedSize: FfiConverterUInt64.read(from: &buf), 
+                mimeType: FfiConverterString.read(from: &buf), 
+                dimensions: FfiConverterOptionTypeImageDimensions.read(from: &buf), 
+                blurhash: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GroupImageUpload, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.encryptedData, into: &buf)
+        FfiConverterData.write(value.encryptedHash, into: &buf)
+        FfiConverterData.write(value.imageKey, into: &buf)
+        FfiConverterData.write(value.imageNonce, into: &buf)
+        FfiConverterString.write(value.uploadSecretKey, into: &buf)
+        FfiConverterUInt64.write(value.originalSize, into: &buf)
+        FfiConverterUInt64.write(value.encryptedSize, into: &buf)
+        FfiConverterString.write(value.mimeType, into: &buf)
+        FfiConverterOptionTypeImageDimensions.write(value.dimensions, into: &buf)
+        FfiConverterOptionString.write(value.blurhash, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupImageUpload_lift(_ buf: RustBuffer) throws -> GroupImageUpload {
+    return try FfiConverterTypeGroupImageUpload.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGroupImageUpload_lower(_ value: GroupImageUpload) -> RustBuffer {
+    return FfiConverterTypeGroupImageUpload.lower(value)
+}
+
+
+/**
+ * Image dimensions
+ */
+public struct ImageDimensions: Equatable, Hashable {
+    /**
+     * Width in pixels
+     */
+    public var width: UInt32
+    /**
+     * Height in pixels
+     */
+    public var height: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Width in pixels
+         */width: UInt32, 
+        /**
+         * Height in pixels
+         */height: UInt32) {
+        self.width = width
+        self.height = height
+    }
+
+    
+}
+
+#if compiler(>=6)
+extension ImageDimensions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeImageDimensions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ImageDimensions {
+        return
+            try ImageDimensions(
+                width: FfiConverterUInt32.read(from: &buf), 
+                height: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ImageDimensions, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.width, into: &buf)
+        FfiConverterUInt32.write(value.height, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImageDimensions_lift(_ buf: RustBuffer) throws -> ImageDimensions {
+    return try FfiConverterTypeImageDimensions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeImageDimensions_lower(_ value: ImageDimensions) -> RustBuffer {
+    return FfiConverterTypeImageDimensions.lower(value)
+}
+
+
+/**
  * Result of creating a key package
  */
 public struct KeyPackageResult: Equatable, Hashable {
@@ -1511,6 +1758,10 @@ public struct Message: Equatable, Hashable {
      */
     public var eventId: String
     /**
+     * Sender public key (hex-encoded)
+     */
+    public var senderPubkey: String
+    /**
      * JSON representation of the event
      */
     public var eventJson: String
@@ -1518,6 +1769,10 @@ public struct Message: Equatable, Hashable {
      * Timestamp when message was processed (Unix timestamp)
      */
     public var processedAt: UInt64
+    /**
+     * Message kind
+     */
+    public var kind: UInt16
     /**
      * Message state (e.g., "processed", "pending")
      */
@@ -1539,11 +1794,17 @@ public struct Message: Equatable, Hashable {
          * Event ID (hex-encoded)
          */eventId: String, 
         /**
+         * Sender public key (hex-encoded)
+         */senderPubkey: String, 
+        /**
          * JSON representation of the event
          */eventJson: String, 
         /**
          * Timestamp when message was processed (Unix timestamp)
          */processedAt: UInt64, 
+        /**
+         * Message kind
+         */kind: UInt16, 
         /**
          * Message state (e.g., "processed", "pending")
          */state: String) {
@@ -1551,8 +1812,10 @@ public struct Message: Equatable, Hashable {
         self.mlsGroupId = mlsGroupId
         self.nostrGroupId = nostrGroupId
         self.eventId = eventId
+        self.senderPubkey = senderPubkey
         self.eventJson = eventJson
         self.processedAt = processedAt
+        self.kind = kind
         self.state = state
     }
 
@@ -1574,8 +1837,10 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
                 mlsGroupId: FfiConverterString.read(from: &buf), 
                 nostrGroupId: FfiConverterString.read(from: &buf), 
                 eventId: FfiConverterString.read(from: &buf), 
+                senderPubkey: FfiConverterString.read(from: &buf), 
                 eventJson: FfiConverterString.read(from: &buf), 
                 processedAt: FfiConverterUInt64.read(from: &buf), 
+                kind: FfiConverterUInt16.read(from: &buf), 
                 state: FfiConverterString.read(from: &buf)
         )
     }
@@ -1585,8 +1850,10 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
         FfiConverterString.write(value.mlsGroupId, into: &buf)
         FfiConverterString.write(value.nostrGroupId, into: &buf)
         FfiConverterString.write(value.eventId, into: &buf)
+        FfiConverterString.write(value.senderPubkey, into: &buf)
         FfiConverterString.write(value.eventJson, into: &buf)
         FfiConverterUInt64.write(value.processedAt, into: &buf)
+        FfiConverterUInt16.write(value.kind, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
     }
 }
@@ -2140,6 +2407,30 @@ fileprivate struct FfiConverterOptionTypeGroup: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeImageDimensions: FfiConverterRustBuffer {
+    typealias SwiftType = ImageDimensions?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeImageDimensions.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeImageDimensions.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeMessage: FfiConverterRustBuffer {
     typealias SwiftType = Message?
 
@@ -2156,6 +2447,30 @@ fileprivate struct FfiConverterOptionTypeMessage: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeMessage.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeWelcome: FfiConverterRustBuffer {
+    typealias SwiftType = Welcome?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeWelcome.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeWelcome.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -2334,12 +2649,45 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
     }
 }
 /**
+ * Decrypt group image
+ */
+public func decryptGroupImage(encryptedData: Data, imageKey: Data, imageNonce: Data)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_decrypt_group_image(
+        FfiConverterData.lower(encryptedData),
+        FfiConverterData.lower(imageKey),
+        FfiConverterData.lower(imageNonce),$0
+    )
+})
+}
+/**
+ * Derive upload keypair for group image
+ */
+public func deriveUploadKeypair(imageKey: Data)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_derive_upload_keypair(
+        FfiConverterData.lower(imageKey),$0
+    )
+})
+}
+/**
  * Create a new MDK instance with SQLite storage
  */
 public func newMdk(dbPath: String)throws  -> Mdk  {
     return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_new_mdk(
         FfiConverterString.lower(dbPath),$0
+    )
+})
+}
+/**
+ * Prepare group image for upload
+ */
+public func prepareGroupImageForUpload(imageData: Data, mimeType: String)throws  -> GroupImageUpload  {
+    return try  FfiConverterTypeGroupImageUpload_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_prepare_group_image_for_upload(
+        FfiConverterData.lower(imageData),
+        FfiConverterString.lower(mimeType),$0
     )
 })
 }
@@ -2359,7 +2707,16 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_func_decrypt_group_image() != 61134) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 59212) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 17648) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload() != 65092) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome() != 44970) {
@@ -2401,6 +2758,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_relays() != 55523) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_welcome() != 25012) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_leave_group() != 20702) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2420,6 +2780,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_self_update() != 2372) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_sync_group_metadata_from_mls() != 16922) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_update_group_data() != 28107) {
