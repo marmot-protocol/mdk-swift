@@ -539,7 +539,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Add members to a group
      */
-    func addMembers(mlsGroupId: String, keyPackageEventsJson: [String]) throws  -> AddMembersResult
+    func addMembers(mlsGroupId: String, keyPackageEventsJson: [String]) throws  -> UpdateGroupResult
     
     /**
      * Create a new group
@@ -554,7 +554,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Create a message in a group
      */
-    func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16) throws  -> String
+    func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?) throws  -> String
     
     /**
      * Decline a welcome message
@@ -604,7 +604,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Create a proposal to leave the group
      */
-    func leaveGroup(mlsGroupId: String) throws  -> AddMembersResult
+    func leaveGroup(mlsGroupId: String) throws  -> UpdateGroupResult
     
     /**
      * Merge pending commit for a group
@@ -614,7 +614,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Parse a key package from a Nostr event
      */
-    func parseKeyPackage(eventJson: String) throws 
+    func parseKeyPackage(eventJson: String) throws  -> String
     
     /**
      * Process an incoming MLS message
@@ -629,12 +629,12 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Remove members from a group
      */
-    func removeMembers(mlsGroupId: String, memberPublicKeys: [String]) throws  -> AddMembersResult
+    func removeMembers(mlsGroupId: String, memberPublicKeys: [String]) throws  -> UpdateGroupResult
     
     /**
      * Update the current member's leaf node in an MLS group
      */
-    func selfUpdate(mlsGroupId: String) throws  -> AddMembersResult
+    func selfUpdate(mlsGroupId: String) throws  -> UpdateGroupResult
     
     /**
      * Sync group metadata from MLS
@@ -644,7 +644,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Update group data (name, description, image, relays, admins)
      */
-    func updateGroupData(mlsGroupId: String, update: GroupDataUpdate) throws  -> AddMembersResult
+    func updateGroupData(mlsGroupId: String, update: GroupDataUpdate) throws  -> UpdateGroupResult
     
 }
 /**
@@ -712,8 +712,8 @@ open func acceptWelcome(welcomeJson: String)throws   {try rustCallWithError(FfiC
     /**
      * Add members to a group
      */
-open func addMembers(mlsGroupId: String, keyPackageEventsJson: [String])throws  -> AddMembersResult  {
-    return try  FfiConverterTypeAddMembersResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func addMembers(mlsGroupId: String, keyPackageEventsJson: [String])throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_add_members(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
@@ -755,14 +755,15 @@ open func createKeyPackageForEvent(publicKey: String, relays: [String])throws  -
     /**
      * Create a message in a group
      */
-open func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16)throws  -> String  {
+open func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_create_message(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
         FfiConverterString.lower(senderPublicKey),
         FfiConverterString.lower(content),
-        FfiConverterUInt16.lower(kind),$0
+        FfiConverterUInt16.lower(kind),
+        FfiConverterOptionSequenceSequenceString.lower(tags),$0
     )
 })
 }
@@ -875,8 +876,8 @@ open func getWelcome(eventId: String)throws  -> Welcome?  {
     /**
      * Create a proposal to leave the group
      */
-open func leaveGroup(mlsGroupId: String)throws  -> AddMembersResult  {
-    return try  FfiConverterTypeAddMembersResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func leaveGroup(mlsGroupId: String)throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_leave_group(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),$0
@@ -898,12 +899,13 @@ open func mergePendingCommit(mlsGroupId: String)throws   {try rustCallWithError(
     /**
      * Parse a key package from a Nostr event
      */
-open func parseKeyPackage(eventJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func parseKeyPackage(eventJson: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_parse_key_package(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(eventJson),$0
     )
-}
+})
 }
     
     /**
@@ -934,8 +936,8 @@ open func processWelcome(wrapperEventId: String, rumorEventJson: String)throws  
     /**
      * Remove members from a group
      */
-open func removeMembers(mlsGroupId: String, memberPublicKeys: [String])throws  -> AddMembersResult  {
-    return try  FfiConverterTypeAddMembersResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func removeMembers(mlsGroupId: String, memberPublicKeys: [String])throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_remove_members(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
@@ -947,8 +949,8 @@ open func removeMembers(mlsGroupId: String, memberPublicKeys: [String])throws  -
     /**
      * Update the current member's leaf node in an MLS group
      */
-open func selfUpdate(mlsGroupId: String)throws  -> AddMembersResult  {
-    return try  FfiConverterTypeAddMembersResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func selfUpdate(mlsGroupId: String)throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_self_update(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),$0
@@ -970,8 +972,8 @@ open func syncGroupMetadataFromMls(mlsGroupId: String)throws   {try rustCallWith
     /**
      * Update group data (name, description, image, relays, admins)
      */
-open func updateGroupData(mlsGroupId: String, update: GroupDataUpdate)throws  -> AddMembersResult  {
-    return try  FfiConverterTypeAddMembersResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func updateGroupData(mlsGroupId: String, update: GroupDataUpdate)throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_update_group_data(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
@@ -1026,83 +1028,6 @@ public func FfiConverterTypeMdk_lower(_ value: Mdk) -> UInt64 {
 }
 
 
-
-
-/**
- * Result of adding members to a group
- */
-public struct AddMembersResult: Equatable, Hashable {
-    /**
-     * JSON-encoded evolution event to be published
-     */
-    public var evolutionEventJson: String
-    /**
-     * Optional JSON-encoded welcome rumors to be published
-     */
-    public var welcomeRumorsJson: [String]?
-    /**
-     * Hex-encoded MLS group ID
-     */
-    public var mlsGroupId: String
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        /**
-         * JSON-encoded evolution event to be published
-         */evolutionEventJson: String, 
-        /**
-         * Optional JSON-encoded welcome rumors to be published
-         */welcomeRumorsJson: [String]?, 
-        /**
-         * Hex-encoded MLS group ID
-         */mlsGroupId: String) {
-        self.evolutionEventJson = evolutionEventJson
-        self.welcomeRumorsJson = welcomeRumorsJson
-        self.mlsGroupId = mlsGroupId
-    }
-
-    
-}
-
-#if compiler(>=6)
-extension AddMembersResult: Sendable {}
-#endif
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypeAddMembersResult: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AddMembersResult {
-        return
-            try AddMembersResult(
-                evolutionEventJson: FfiConverterString.read(from: &buf), 
-                welcomeRumorsJson: FfiConverterOptionSequenceString.read(from: &buf), 
-                mlsGroupId: FfiConverterString.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: AddMembersResult, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.evolutionEventJson, into: &buf)
-        FfiConverterOptionSequenceString.write(value.welcomeRumorsJson, into: &buf)
-        FfiConverterString.write(value.mlsGroupId, into: &buf)
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAddMembersResult_lift(_ buf: RustBuffer) throws -> AddMembersResult {
-    return try FfiConverterTypeAddMembersResult.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypeAddMembersResult_lower(_ value: AddMembersResult) -> RustBuffer {
-    return FfiConverterTypeAddMembersResult.lower(value)
-}
 
 
 /**
@@ -1875,6 +1800,83 @@ public func FfiConverterTypeMessage_lower(_ value: Message) -> RustBuffer {
 
 
 /**
+ * Result of updating a group
+ */
+public struct UpdateGroupResult: Equatable, Hashable {
+    /**
+     * JSON-encoded evolution event to be published
+     */
+    public var evolutionEventJson: String
+    /**
+     * Optional JSON-encoded welcome rumors to be published
+     */
+    public var welcomeRumorsJson: [String]?
+    /**
+     * Hex-encoded MLS group ID
+     */
+    public var mlsGroupId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * JSON-encoded evolution event to be published
+         */evolutionEventJson: String, 
+        /**
+         * Optional JSON-encoded welcome rumors to be published
+         */welcomeRumorsJson: [String]?, 
+        /**
+         * Hex-encoded MLS group ID
+         */mlsGroupId: String) {
+        self.evolutionEventJson = evolutionEventJson
+        self.welcomeRumorsJson = welcomeRumorsJson
+        self.mlsGroupId = mlsGroupId
+    }
+
+    
+}
+
+#if compiler(>=6)
+extension UpdateGroupResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUpdateGroupResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UpdateGroupResult {
+        return
+            try UpdateGroupResult(
+                evolutionEventJson: FfiConverterString.read(from: &buf), 
+                welcomeRumorsJson: FfiConverterOptionSequenceString.read(from: &buf), 
+                mlsGroupId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UpdateGroupResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.evolutionEventJson, into: &buf)
+        FfiConverterOptionSequenceString.write(value.welcomeRumorsJson, into: &buf)
+        FfiConverterString.write(value.mlsGroupId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUpdateGroupResult_lift(_ buf: RustBuffer) throws -> UpdateGroupResult {
+    return try FfiConverterTypeUpdateGroupResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUpdateGroupResult_lower(_ value: UpdateGroupResult) -> RustBuffer {
+    return FfiConverterTypeUpdateGroupResult.lower(value)
+}
+
+
+/**
  * Welcome representation
  */
 public struct Welcome: Equatable, Hashable {
@@ -2196,7 +2198,7 @@ public enum ProcessMessageResult: Equatable, Hashable {
     case proposal(
         /**
          * The proposal result containing evolution event and welcome rumors
-         */result: AddMembersResult
+         */result: UpdateGroupResult
     )
     /**
      * External join proposal
@@ -2244,7 +2246,7 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
         case 1: return .applicationMessage(message: try FfiConverterTypeMessage.read(from: &buf)
         )
         
-        case 2: return .proposal(result: try FfiConverterTypeAddMembersResult.read(from: &buf)
+        case 2: return .proposal(result: try FfiConverterTypeUpdateGroupResult.read(from: &buf)
         )
         
         case 3: return .externalJoinProposal(mlsGroupId: try FfiConverterString.read(from: &buf)
@@ -2271,7 +2273,7 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
         
         case let .proposal(result):
             writeInt(&buf, Int32(2))
-            FfiConverterTypeAddMembersResult.write(result, into: &buf)
+            FfiConverterTypeUpdateGroupResult.write(result, into: &buf)
             
         
         case let .externalJoinProposal(mlsGroupId):
@@ -2527,6 +2529,30 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[String]]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -2722,7 +2748,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome() != 44970) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_add_members() != 48219) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_add_members() != 19089) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_group() != 56895) {
@@ -2731,7 +2757,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event() != 48232) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 41079) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 58601) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome() != 58096) {
@@ -2761,13 +2787,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_welcome() != 25012) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_leave_group() != 20702) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_leave_group() != 46166) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_merge_pending_commit() != 22201) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_parse_key_package() != 25544) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_parse_key_package() != 41870) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_process_message() != 15589) {
@@ -2776,16 +2802,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_process_welcome() != 34932) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_remove_members() != 46971) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_remove_members() != 31926) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_self_update() != 2372) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_self_update() != 48999) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_sync_group_metadata_from_mls() != 16922) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_update_group_data() != 28107) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_update_group_data() != 32068) {
         return InitializationResult.apiChecksumMismatch
     }
 

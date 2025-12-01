@@ -275,7 +275,7 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event(uint64_t
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_message(uint64_t ptr, RustBuffer mls_group_id, RustBuffer sender_public_key, RustBuffer content, uint16_t kind, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_message(uint64_t ptr, RustBuffer mls_group_id, RustBuffer sender_public_key, RustBuffer content, uint16_t kind, RustBuffer tags, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME
@@ -335,7 +335,7 @@ void uniffi_mdk_uniffi_fn_method_mdk_merge_pending_commit(uint64_t ptr, RustBuff
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_KEY_PACKAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_KEY_PACKAGE
-void uniffi_mdk_uniffi_fn_method_mdk_parse_key_package(uint64_t ptr, RustBuffer event_json, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_parse_key_package(uint64_t ptr, RustBuffer event_json, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PROCESS_MESSAGE
