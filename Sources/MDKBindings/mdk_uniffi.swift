@@ -2689,10 +2689,11 @@ public func decryptGroupImage(encryptedData: Data, imageKey: Data, imageNonce: D
 /**
  * Derive upload keypair for group image
  */
-public func deriveUploadKeypair(imageKey: Data)throws  -> String  {
+public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_derive_upload_keypair(
-        FfiConverterData.lower(imageKey),$0
+        FfiConverterData.lower(imageKey),
+        FfiConverterUInt16.lower(version),$0
     )
 })
 }
@@ -2736,7 +2737,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_func_decrypt_group_image() != 61134) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 59212) {
+    if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 45595) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 17648) {

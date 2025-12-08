@@ -375,7 +375,7 @@ RustBuffer uniffi_mdk_uniffi_fn_func_decrypt_group_image(RustBuffer encrypted_da
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DERIVE_UPLOAD_KEYPAIR
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DERIVE_UPLOAD_KEYPAIR
-RustBuffer uniffi_mdk_uniffi_fn_func_derive_upload_keypair(RustBuffer image_key, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_func_derive_upload_keypair(RustBuffer image_key, uint16_t version, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK
