@@ -255,7 +255,12 @@ void uniffi_mdk_uniffi_fn_free_mdk(uint64_t handle, RustCallStatus *_Nonnull out
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ACCEPT_WELCOME
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ACCEPT_WELCOME
-void uniffi_mdk_uniffi_fn_method_mdk_accept_welcome(uint64_t ptr, RustBuffer welcome_json, RustCallStatus *_Nonnull out_status
+void uniffi_mdk_uniffi_fn_method_mdk_accept_welcome(uint64_t ptr, RustBuffer welcome, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ACCEPT_WELCOME_JSON
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ACCEPT_WELCOME_JSON
+void uniffi_mdk_uniffi_fn_method_mdk_accept_welcome_json(uint64_t ptr, RustBuffer welcome_json, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ADD_MEMBERS
@@ -280,7 +285,12 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_message(uint64_t ptr, RustBuff
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME
-void uniffi_mdk_uniffi_fn_method_mdk_decline_welcome(uint64_t ptr, RustBuffer welcome_json, RustCallStatus *_Nonnull out_status
+void uniffi_mdk_uniffi_fn_method_mdk_decline_welcome(uint64_t ptr, RustBuffer welcome, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME_JSON
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME_JSON
+void uniffi_mdk_uniffi_fn_method_mdk_decline_welcome_json(uint64_t ptr, RustBuffer welcome_json, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_GROUP
@@ -678,6 +688,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ACCEPT_WELCOME_JSON
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ACCEPT_WELCOME_JSON
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome_json(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ADD_MEMBERS
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ADD_MEMBERS
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_add_members(void
@@ -705,6 +721,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_message(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME_JSON
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME_JSON
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome_json(void
     
 );
 #endif

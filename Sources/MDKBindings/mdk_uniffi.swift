@@ -534,7 +534,12 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Accept a welcome message
      */
-    func acceptWelcome(welcomeJson: String) throws 
+    func acceptWelcome(welcome: Welcome) throws 
+    
+    /**
+     * Accept a welcome message from JSON
+     */
+    func acceptWelcomeJson(welcomeJson: String) throws 
     
     /**
      * Add members to a group
@@ -559,7 +564,12 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Decline a welcome message
      */
-    func declineWelcome(welcomeJson: String) throws 
+    func declineWelcome(welcome: Welcome) throws 
+    
+    /**
+     * Decline a welcome message from JSON
+     */
+    func declineWelcomeJson(welcomeJson: String) throws 
     
     /**
      * Get a group by MLS group ID
@@ -701,8 +711,19 @@ open class Mdk: MdkProtocol, @unchecked Sendable {
     /**
      * Accept a welcome message
      */
-open func acceptWelcome(welcomeJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func acceptWelcome(welcome: Welcome)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_accept_welcome(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeWelcome_lower(welcome),$0
+    )
+}
+}
+    
+    /**
+     * Accept a welcome message from JSON
+     */
+open func acceptWelcomeJson(welcomeJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_accept_welcome_json(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(welcomeJson),$0
     )
@@ -771,8 +792,19 @@ open func createMessage(mlsGroupId: String, senderPublicKey: String, content: St
     /**
      * Decline a welcome message
      */
-open func declineWelcome(welcomeJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+open func declineWelcome(welcome: Welcome)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_decline_welcome(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeWelcome_lower(welcome),$0
+    )
+}
+}
+    
+    /**
+     * Decline a welcome message from JSON
+     */
+open func declineWelcomeJson(welcomeJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_decline_welcome_json(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(welcomeJson),$0
     )
@@ -2746,7 +2778,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload() != 65092) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome() != 44970) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome() != 3695) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome_json() != 39652) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_add_members() != 19089) {
@@ -2761,7 +2796,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 58601) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome() != 58096) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome() != 57917) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome_json() != 21478) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_group() != 1495) {
