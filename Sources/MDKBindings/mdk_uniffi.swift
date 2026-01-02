@@ -2709,10 +2709,11 @@ fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
 /**
  * Decrypt group image
  */
-public func decryptGroupImage(encryptedData: Data, imageKey: Data, imageNonce: Data)throws  -> Data  {
+public func decryptGroupImage(encryptedData: Data, expectedHash: Data?, imageKey: Data, imageNonce: Data)throws  -> Data  {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_decrypt_group_image(
         FfiConverterData.lower(encryptedData),
+        FfiConverterOptionData.lower(expectedHash),
         FfiConverterData.lower(imageKey),
         FfiConverterData.lower(imageNonce),$0
     )
@@ -2766,7 +2767,7 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_decrypt_group_image() != 61134) {
+    if (uniffi_mdk_uniffi_checksum_func_decrypt_group_image() != 29409) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 45595) {

@@ -380,7 +380,7 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_update_group_data(uint64_t ptr, RustB
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DECRYPT_GROUP_IMAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DECRYPT_GROUP_IMAGE
-RustBuffer uniffi_mdk_uniffi_fn_func_decrypt_group_image(RustBuffer encrypted_data, RustBuffer image_key, RustBuffer image_nonce, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_func_decrypt_group_image(RustBuffer encrypted_data, RustBuffer expected_hash, RustBuffer image_key, RustBuffer image_nonce, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DERIVE_UPLOAD_KEYPAIR
