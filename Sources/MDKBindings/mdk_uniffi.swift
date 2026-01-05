@@ -602,6 +602,20 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getPendingWelcomes() throws  -> [Welcome]
     
     /**
+     * Get pending welcomes with pagination
+     *
+     * # Arguments
+     *
+     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000)
+     * * `offset` - Optional number of welcomes to skip (defaults to 0)
+     *
+     * # Returns
+     *
+     * Returns a vector of pending welcomes ordered by ID (descending)
+     */
+    func getPendingWelcomesPaginated(limit: UInt32?, offset: UInt32?) throws  -> [Welcome]
+    
+    /**
      * Get relays for a group
      */
     func getRelays(mlsGroupId: String) throws  -> [String]
@@ -877,6 +891,28 @@ open func getPendingWelcomes()throws  -> [Welcome]  {
     return try  FfiConverterSequenceTypeWelcome.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes(
             self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Get pending welcomes with pagination
+     *
+     * # Arguments
+     *
+     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000)
+     * * `offset` - Optional number of welcomes to skip (defaults to 0)
+     *
+     * # Returns
+     *
+     * Returns a vector of pending welcomes ordered by ID (descending)
+     */
+open func getPendingWelcomesPaginated(limit: UInt32?, offset: UInt32?)throws  -> [Welcome]  {
+    return try  FfiConverterSequenceTypeWelcome.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes_paginated(
+            self.uniffiCloneHandle(),
+        FfiConverterOptionUInt32.lower(limit),
+        FfiConverterOptionUInt32.lower(offset),$0
     )
 })
 }
@@ -2345,6 +2381,30 @@ public func FfiConverterTypeProcessMessageResult_lower(_ value: ProcessMessageRe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = UInt32?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
     typealias SwiftType = UInt64?
 
@@ -2819,6 +2879,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 45023) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes_paginated() != 62033) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_relays() != 55523) {
