@@ -597,23 +597,18 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getMessages(mlsGroupId: String) throws  -> [Message]
     
     /**
-     * Get pending welcomes
-     */
-    func getPendingWelcomes() throws  -> [Welcome]
-    
-    /**
-     * Get pending welcomes with pagination
+     * Get pending welcomes with optional pagination
      *
      * # Arguments
      *
-     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000)
-     * * `offset` - Optional number of welcomes to skip (defaults to 0)
+     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000 if None)
+     * * `offset` - Optional number of welcomes to skip (defaults to 0 if None)
      *
      * # Returns
      *
      * Returns a vector of pending welcomes ordered by ID (descending)
      */
-    func getPendingWelcomesPaginated(limit: UInt32?, offset: UInt32?) throws  -> [Welcome]
+    func getPendingWelcomes(limit: UInt32?, offset: UInt32?) throws  -> [Welcome]
     
     /**
      * Get relays for a group
@@ -885,31 +880,20 @@ open func getMessages(mlsGroupId: String)throws  -> [Message]  {
 }
     
     /**
-     * Get pending welcomes
-     */
-open func getPendingWelcomes()throws  -> [Welcome]  {
-    return try  FfiConverterSequenceTypeWelcome.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
-    uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes(
-            self.uniffiCloneHandle(),$0
-    )
-})
-}
-    
-    /**
-     * Get pending welcomes with pagination
+     * Get pending welcomes with optional pagination
      *
      * # Arguments
      *
-     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000)
-     * * `offset` - Optional number of welcomes to skip (defaults to 0)
+     * * `limit` - Optional maximum number of welcomes to return (defaults to 1000 if None)
+     * * `offset` - Optional number of welcomes to skip (defaults to 0 if None)
      *
      * # Returns
      *
      * Returns a vector of pending welcomes ordered by ID (descending)
      */
-open func getPendingWelcomesPaginated(limit: UInt32?, offset: UInt32?)throws  -> [Welcome]  {
+open func getPendingWelcomes(limit: UInt32?, offset: UInt32?)throws  -> [Welcome]  {
     return try  FfiConverterSequenceTypeWelcome.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
-    uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes_paginated(
+    uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes(
             self.uniffiCloneHandle(),
         FfiConverterOptionUInt32.lower(limit),
         FfiConverterOptionUInt32.lower(offset),$0
@@ -2878,10 +2862,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 34303) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 45023) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes_paginated() != 62033) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 31211) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_relays() != 55523) {

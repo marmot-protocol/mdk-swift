@@ -320,12 +320,7 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_messages(uint64_t ptr, RustBuffer
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_PENDING_WELCOMES
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_PENDING_WELCOMES
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes(uint64_t ptr, RustCallStatus *_Nonnull out_status
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_PENDING_WELCOMES_PAGINATED
-#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_PENDING_WELCOMES_PAGINATED
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes_paginated(uint64_t ptr, RustBuffer limit, RustBuffer offset, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_pending_welcomes(uint64_t ptr, RustBuffer limit, RustBuffer offset, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_RELAYS
@@ -768,12 +763,6 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_get_messages(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GET_PENDING_WELCOMES
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GET_PENDING_WELCOMES
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes(void
-    
-);
-#endif
-#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GET_PENDING_WELCOMES_PAGINATED
-#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GET_PENDING_WELCOMES_PAGINATED
-uint16_t uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes_paginated(void
     
 );
 #endif
