@@ -592,9 +592,19 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getMessage(eventId: String) throws  -> Message?
     
     /**
-     * Get messages for a group
+     * Get messages for a group with optional pagination
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `limit` - Optional maximum number of messages to return (defaults to 1000 if None)
+     * * `offset` - Optional number of messages to skip (defaults to 0 if None)
+     *
+     * # Returns
+     *
+     * Returns a vector of messages ordered by creation time
      */
-    func getMessages(mlsGroupId: String) throws  -> [Message]
+    func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?) throws  -> [Message]
     
     /**
      * Get pending welcomes with optional pagination
@@ -868,13 +878,25 @@ open func getMessage(eventId: String)throws  -> Message?  {
 }
     
     /**
-     * Get messages for a group
+     * Get messages for a group with optional pagination
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `limit` - Optional maximum number of messages to return (defaults to 1000 if None)
+     * * `offset` - Optional number of messages to skip (defaults to 0 if None)
+     *
+     * # Returns
+     *
+     * Returns a vector of messages ordered by creation time
      */
-open func getMessages(mlsGroupId: String)throws  -> [Message]  {
+open func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?)throws  -> [Message]  {
     return try  FfiConverterSequenceTypeMessage.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_get_messages(
             self.uniffiCloneHandle(),
-        FfiConverterString.lower(mlsGroupId),$0
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterOptionUInt32.lower(limit),
+        FfiConverterOptionUInt32.lower(offset),$0
     )
 })
 }
@@ -2859,7 +2881,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_message() != 52354) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 34303) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 36057) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 31211) {
