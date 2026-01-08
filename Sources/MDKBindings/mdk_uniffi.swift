@@ -2267,12 +2267,20 @@ public enum ProcessMessageResult: Equatable, Hashable {
          */message: Message
     )
     /**
-     * A proposal message (add/remove member proposal)
+     * A proposal message that was auto-committed by an admin receiver
      */
     case proposal(
         /**
          * The proposal result containing evolution event and welcome rumors
          */result: UpdateGroupResult
+    )
+    /**
+     * A pending proposal stored but not committed (receiver is not admin)
+     */
+    case pendingProposal(
+        /**
+         * Hex-encoded MLS group ID this pending proposal belongs to
+         */mlsGroupId: String
     )
     /**
      * External join proposal
@@ -2297,6 +2305,17 @@ public enum ProcessMessageResult: Equatable, Hashable {
         /**
          * Hex-encoded MLS group ID of the message that could not be processed
          */mlsGroupId: String
+    )
+    /**
+     * Proposal was ignored and not stored
+     */
+    case ignoredProposal(
+        /**
+         * Hex-encoded MLS group ID this proposal was for
+         */mlsGroupId: String, 
+        /**
+         * Reason the proposal was ignored
+         */reason: String
     )
 
 
@@ -2323,13 +2342,19 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
         case 2: return .proposal(result: try FfiConverterTypeUpdateGroupResult.read(from: &buf)
         )
         
-        case 3: return .externalJoinProposal(mlsGroupId: try FfiConverterString.read(from: &buf)
+        case 3: return .pendingProposal(mlsGroupId: try FfiConverterString.read(from: &buf)
         )
         
-        case 4: return .commit(mlsGroupId: try FfiConverterString.read(from: &buf)
+        case 4: return .externalJoinProposal(mlsGroupId: try FfiConverterString.read(from: &buf)
         )
         
-        case 5: return .unprocessable(mlsGroupId: try FfiConverterString.read(from: &buf)
+        case 5: return .commit(mlsGroupId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .unprocessable(mlsGroupId: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .ignoredProposal(mlsGroupId: try FfiConverterString.read(from: &buf), reason: try FfiConverterString.read(from: &buf)
         )
         
         default: throw UniffiInternalError.unexpectedEnumCase
@@ -2350,19 +2375,30 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
             FfiConverterTypeUpdateGroupResult.write(result, into: &buf)
             
         
-        case let .externalJoinProposal(mlsGroupId):
+        case let .pendingProposal(mlsGroupId):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(mlsGroupId, into: &buf)
             
         
-        case let .commit(mlsGroupId):
+        case let .externalJoinProposal(mlsGroupId):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(mlsGroupId, into: &buf)
             
         
-        case let .unprocessable(mlsGroupId):
+        case let .commit(mlsGroupId):
             writeInt(&buf, Int32(5))
             FfiConverterString.write(mlsGroupId, into: &buf)
+            
+        
+        case let .unprocessable(mlsGroupId):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(mlsGroupId, into: &buf)
+            
+        
+        case let .ignoredProposal(mlsGroupId,reason):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(mlsGroupId, into: &buf)
+            FfiConverterString.write(reason, into: &buf)
             
         }
     }
