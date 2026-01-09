@@ -2833,12 +2833,81 @@ public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> Strin
 })
 }
 /**
- * Create a new MDK instance with SQLite storage
+ * Create a new MDK instance with encrypted SQLite storage using automatic key management.
+ *
+ * This is the recommended constructor for production use. The database encryption key
+ * is automatically retrieved from (or generated and stored in) the platform's native
+ * keyring (Keychain on macOS/iOS, Keystore on Android, etc.).
+ *
+ * # Prerequisites
+ *
+ * The host application must initialize a platform-specific keyring store before calling
+ * this function:
+ *
+ * - **macOS/iOS**: `keyring_core::set_default_store(AppleStore::new())`
+ * - **Android**: Initialize from Kotlin (see Android documentation)
+ * - **Windows**: `keyring_core::set_default_store(WindowsStore::new())`
+ * - **Linux**: `keyring_core::set_default_store(KeyutilsStore::new())`
+ *
+ * # Arguments
+ *
+ * * `db_path` - Path to the SQLite database file
+ * * `service_id` - A stable, host-defined application identifier (e.g., "com.example.myapp")
+ * * `db_key_id` - A stable identifier for this database's key (e.g., "mdk.db.key.default")
+ *
+ * # Errors
+ *
+ * Returns an error if:
+ * - No keyring store has been initialized
+ * - The keyring is unavailable or inaccessible
+ * - The database cannot be opened or created
  */
-public func newMdk(dbPath: String)throws  -> Mdk  {
+public func newMdk(dbPath: String, serviceId: String, dbKeyId: String)throws  -> Mdk  {
     return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_new_mdk(
+        FfiConverterString.lower(dbPath),
+        FfiConverterString.lower(serviceId),
+        FfiConverterString.lower(dbKeyId),$0
+    )
+})
+}
+/**
+ * Create a new MDK instance with unencrypted SQLite storage.
+ *
+ * ⚠️ **WARNING**: This creates an unencrypted database. Sensitive MLS state
+ * including exporter secrets will be stored in plaintext.
+ *
+ * Only use this for development or testing. For production use, use `new_mdk`
+ * with an encryption key.
+ */
+public func newMdkUnencrypted(dbPath: String)throws  -> Mdk  {
+    return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_new_mdk_unencrypted(
         FfiConverterString.lower(dbPath),$0
+    )
+})
+}
+/**
+ * Create a new MDK instance with encrypted SQLite storage using a directly provided key.
+ *
+ * Use this when you want to manage encryption keys yourself rather than using the
+ * platform keyring. For most applications, prefer `new_mdk` which handles key
+ * management automatically.
+ *
+ * # Arguments
+ *
+ * * `db_path` - Path to the SQLite database file
+ * * `encryption_key` - 32-byte encryption key (must be exactly 32 bytes)
+ *
+ * # Errors
+ *
+ * Returns an error if the key is not 32 bytes or if the database cannot be opened.
+ */
+public func newMdkWithKey(dbPath: String, encryptionKey: Data)throws  -> Mdk  {
+    return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_new_mdk_with_key(
+        FfiConverterString.lower(dbPath),
+        FfiConverterData.lower(encryptionKey),$0
     )
 })
 }
@@ -2875,7 +2944,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 45595) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 17648) {
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 45127) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk_unencrypted() != 60821) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk_with_key() != 40953) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload() != 65092) {

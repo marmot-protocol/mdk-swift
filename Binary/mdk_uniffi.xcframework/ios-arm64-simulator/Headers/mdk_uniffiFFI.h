@@ -390,7 +390,17 @@ RustBuffer uniffi_mdk_uniffi_fn_func_derive_upload_keypair(RustBuffer image_key,
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK
-uint64_t uniffi_mdk_uniffi_fn_func_new_mdk(RustBuffer db_path, RustCallStatus *_Nonnull out_status
+uint64_t uniffi_mdk_uniffi_fn_func_new_mdk(RustBuffer db_path, RustBuffer service_id, RustBuffer db_key_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK_UNENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK_UNENCRYPTED
+uint64_t uniffi_mdk_uniffi_fn_func_new_mdk_unencrypted(RustBuffer db_path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK_WITH_KEY
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_NEW_MDK_WITH_KEY
+uint64_t uniffi_mdk_uniffi_fn_func_new_mdk_with_key(RustBuffer db_path, RustBuffer encryption_key, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_PREPARE_GROUP_IMAGE_FOR_UPLOAD
@@ -673,6 +683,18 @@ uint16_t uniffi_mdk_uniffi_checksum_func_derive_upload_keypair(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK
 uint16_t uniffi_mdk_uniffi_checksum_func_new_mdk(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK_UNENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK_UNENCRYPTED
+uint16_t uniffi_mdk_uniffi_checksum_func_new_mdk_unencrypted(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK_WITH_KEY
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_FUNC_NEW_MDK_WITH_KEY
+uint16_t uniffi_mdk_uniffi_checksum_func_new_mdk_with_key(void
     
 );
 #endif
