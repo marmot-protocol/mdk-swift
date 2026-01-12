@@ -587,9 +587,18 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getMembers(mlsGroupId: String) throws  -> [String]
     
     /**
-     * Get a message by event ID
+     * Get a message by event ID within a specific group
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - The MLS group ID the message belongs to (hex-encoded)
+     * * `event_id` - The Nostr event ID to look up (hex-encoded)
+     *
+     * # Returns
+     *
+     * Returns the message if found, None otherwise
      */
-    func getMessage(eventId: String) throws  -> Message?
+    func getMessage(mlsGroupId: String, eventId: String) throws  -> Message?
     
     /**
      * Get messages for a group with optional pagination
@@ -866,12 +875,22 @@ open func getMembers(mlsGroupId: String)throws  -> [String]  {
 }
     
     /**
-     * Get a message by event ID
+     * Get a message by event ID within a specific group
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - The MLS group ID the message belongs to (hex-encoded)
+     * * `event_id` - The Nostr event ID to look up (hex-encoded)
+     *
+     * # Returns
+     *
+     * Returns the message if found, None otherwise
      */
-open func getMessage(eventId: String)throws  -> Message?  {
+open func getMessage(mlsGroupId: String, eventId: String)throws  -> Message?  {
     return try  FfiConverterOptionTypeMessage.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_get_message(
             self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
         FfiConverterString.lower(eventId),$0
     )
 })
@@ -2989,7 +3008,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_members() != 9763) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_get_message() != 52354) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_message() != 47057) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 36057) {

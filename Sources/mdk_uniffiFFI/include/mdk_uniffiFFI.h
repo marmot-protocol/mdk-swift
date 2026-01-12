@@ -310,7 +310,7 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_members(uint64_t ptr, RustBuffer 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_MESSAGE
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_message(uint64_t ptr, RustBuffer event_id, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_message(uint64_t ptr, RustBuffer mls_group_id, RustBuffer event_id, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_MESSAGES
