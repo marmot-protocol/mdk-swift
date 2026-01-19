@@ -1756,6 +1756,107 @@ public func FfiConverterTypeKeyPackageResult_lower(_ value: KeyPackageResult) ->
 
 
 /**
+ * Configuration for MDK behavior
+ *
+ * This struct allows customization of various MDK parameters including
+ * message validation and MLS sender ratchet settings. All fields are optional
+ * and default to sensible values when not provided.
+ */
+public struct MdkConfig: Equatable, Hashable {
+    /**
+     * Maximum age for accepted events in seconds.
+     * Default: 3888000 (45 days)
+     */
+    public var maxEventAgeSecs: UInt64?
+    /**
+     * Maximum future timestamp skew allowed in seconds.
+     * Default: 300 (5 minutes)
+     */
+    public var maxFutureSkewSecs: UInt64?
+    /**
+     * Number of past message decryption secrets to retain for out-of-order delivery.
+     * Higher values improve tolerance for reordered messages but reduce forward secrecy.
+     * Default: 100
+     */
+    public var outOfOrderTolerance: UInt32?
+    /**
+     * Maximum number of messages that can be skipped before decryption fails.
+     * Default: 1000
+     */
+    public var maximumForwardDistance: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Maximum age for accepted events in seconds.
+         * Default: 3888000 (45 days)
+         */maxEventAgeSecs: UInt64?, 
+        /**
+         * Maximum future timestamp skew allowed in seconds.
+         * Default: 300 (5 minutes)
+         */maxFutureSkewSecs: UInt64?, 
+        /**
+         * Number of past message decryption secrets to retain for out-of-order delivery.
+         * Higher values improve tolerance for reordered messages but reduce forward secrecy.
+         * Default: 100
+         */outOfOrderTolerance: UInt32?, 
+        /**
+         * Maximum number of messages that can be skipped before decryption fails.
+         * Default: 1000
+         */maximumForwardDistance: UInt32?) {
+        self.maxEventAgeSecs = maxEventAgeSecs
+        self.maxFutureSkewSecs = maxFutureSkewSecs
+        self.outOfOrderTolerance = outOfOrderTolerance
+        self.maximumForwardDistance = maximumForwardDistance
+    }
+
+    
+}
+
+#if compiler(>=6)
+extension MdkConfig: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkConfig: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkConfig {
+        return
+            try MdkConfig(
+                maxEventAgeSecs: FfiConverterOptionUInt64.read(from: &buf), 
+                maxFutureSkewSecs: FfiConverterOptionUInt64.read(from: &buf), 
+                outOfOrderTolerance: FfiConverterOptionUInt32.read(from: &buf), 
+                maximumForwardDistance: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdkConfig, into buf: inout [UInt8]) {
+        FfiConverterOptionUInt64.write(value.maxEventAgeSecs, into: &buf)
+        FfiConverterOptionUInt64.write(value.maxFutureSkewSecs, into: &buf)
+        FfiConverterOptionUInt32.write(value.outOfOrderTolerance, into: &buf)
+        FfiConverterOptionUInt32.write(value.maximumForwardDistance, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkConfig_lift(_ buf: RustBuffer) throws -> MdkConfig {
+    return try FfiConverterTypeMdkConfig.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkConfig_lower(_ value: MdkConfig) -> RustBuffer {
+    return FfiConverterTypeMdkConfig.lower(value)
+}
+
+
+/**
  * Message representation
  */
 public struct Message: Equatable, Hashable {
@@ -2586,6 +2687,30 @@ fileprivate struct FfiConverterOptionTypeImageDimensions: FfiConverterRustBuffer
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeMdkConfig: FfiConverterRustBuffer {
+    typealias SwiftType = MdkConfig?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMdkConfig.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMdkConfig.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeMessage: FfiConverterRustBuffer {
     typealias SwiftType = Message?
 
@@ -2873,6 +2998,7 @@ public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> Strin
  * * `db_path` - Path to the SQLite database file
  * * `service_id` - A stable, host-defined application identifier (e.g., "com.example.myapp")
  * * `db_key_id` - A stable identifier for this database's key (e.g., "mdk.db.key.default")
+ * * `config` - Optional MDK configuration. If None, uses default configuration.
  *
  * # Errors
  *
@@ -2881,12 +3007,13 @@ public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> Strin
  * - The keyring is unavailable or inaccessible
  * - The database cannot be opened or created
  */
-public func newMdk(dbPath: String, serviceId: String, dbKeyId: String)throws  -> Mdk  {
+public func newMdk(dbPath: String, serviceId: String, dbKeyId: String, config: MdkConfig?)throws  -> Mdk  {
     return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_new_mdk(
         FfiConverterString.lower(dbPath),
         FfiConverterString.lower(serviceId),
-        FfiConverterString.lower(dbKeyId),$0
+        FfiConverterString.lower(dbKeyId),
+        FfiConverterOptionTypeMdkConfig.lower(config),$0
     )
 })
 }
@@ -2898,11 +3025,17 @@ public func newMdk(dbPath: String, serviceId: String, dbKeyId: String)throws  ->
  *
  * Only use this for development or testing. For production use, use `new_mdk`
  * with an encryption key.
+ *
+ * # Arguments
+ *
+ * * `db_path` - Path to the SQLite database file
+ * * `config` - Optional MDK configuration. If None, uses default configuration.
  */
-public func newMdkUnencrypted(dbPath: String)throws  -> Mdk  {
+public func newMdkUnencrypted(dbPath: String, config: MdkConfig?)throws  -> Mdk  {
     return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_new_mdk_unencrypted(
-        FfiConverterString.lower(dbPath),$0
+        FfiConverterString.lower(dbPath),
+        FfiConverterOptionTypeMdkConfig.lower(config),$0
     )
 })
 }
@@ -2917,16 +3050,18 @@ public func newMdkUnencrypted(dbPath: String)throws  -> Mdk  {
  *
  * * `db_path` - Path to the SQLite database file
  * * `encryption_key` - 32-byte encryption key (must be exactly 32 bytes)
+ * * `config` - Optional MDK configuration. If None, uses default configuration.
  *
  * # Errors
  *
  * Returns an error if the key is not 32 bytes or if the database cannot be opened.
  */
-public func newMdkWithKey(dbPath: String, encryptionKey: Data)throws  -> Mdk  {
+public func newMdkWithKey(dbPath: String, encryptionKey: Data, config: MdkConfig?)throws  -> Mdk  {
     return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_func_new_mdk_with_key(
         FfiConverterString.lower(dbPath),
-        FfiConverterData.lower(encryptionKey),$0
+        FfiConverterData.lower(encryptionKey),
+        FfiConverterOptionTypeMdkConfig.lower(config),$0
     )
 })
 }
@@ -2963,13 +3098,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 45595) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 45127) {
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 40772) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk_unencrypted() != 60821) {
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk_unencrypted() != 29834) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk_with_key() != 40953) {
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk_with_key() != 29974) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload() != 65092) {
