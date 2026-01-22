@@ -1784,6 +1784,17 @@ public struct MdkConfig: Equatable, Hashable {
      * Default: 1000
      */
     public var maximumForwardDistance: UInt32?
+    /**
+     * Number of epoch snapshots to retain for rollback support.
+     * Default: 5
+     */
+    public var epochSnapshotRetention: UInt32?
+    /**
+     * Time-to-live for snapshots in seconds.
+     * Snapshots older than this will be pruned on startup.
+     * Default: 604800 (1 week)
+     */
+    public var snapshotTtlSeconds: UInt64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1804,11 +1815,22 @@ public struct MdkConfig: Equatable, Hashable {
         /**
          * Maximum number of messages that can be skipped before decryption fails.
          * Default: 1000
-         */maximumForwardDistance: UInt32?) {
+         */maximumForwardDistance: UInt32?, 
+        /**
+         * Number of epoch snapshots to retain for rollback support.
+         * Default: 5
+         */epochSnapshotRetention: UInt32?, 
+        /**
+         * Time-to-live for snapshots in seconds.
+         * Snapshots older than this will be pruned on startup.
+         * Default: 604800 (1 week)
+         */snapshotTtlSeconds: UInt64?) {
         self.maxEventAgeSecs = maxEventAgeSecs
         self.maxFutureSkewSecs = maxFutureSkewSecs
         self.outOfOrderTolerance = outOfOrderTolerance
         self.maximumForwardDistance = maximumForwardDistance
+        self.epochSnapshotRetention = epochSnapshotRetention
+        self.snapshotTtlSeconds = snapshotTtlSeconds
     }
 
     
@@ -1828,7 +1850,9 @@ public struct FfiConverterTypeMdkConfig: FfiConverterRustBuffer {
                 maxEventAgeSecs: FfiConverterOptionUInt64.read(from: &buf), 
                 maxFutureSkewSecs: FfiConverterOptionUInt64.read(from: &buf), 
                 outOfOrderTolerance: FfiConverterOptionUInt32.read(from: &buf), 
-                maximumForwardDistance: FfiConverterOptionUInt32.read(from: &buf)
+                maximumForwardDistance: FfiConverterOptionUInt32.read(from: &buf), 
+                epochSnapshotRetention: FfiConverterOptionUInt32.read(from: &buf), 
+                snapshotTtlSeconds: FfiConverterOptionUInt64.read(from: &buf)
         )
     }
 
@@ -1837,6 +1861,8 @@ public struct FfiConverterTypeMdkConfig: FfiConverterRustBuffer {
         FfiConverterOptionUInt64.write(value.maxFutureSkewSecs, into: &buf)
         FfiConverterOptionUInt32.write(value.outOfOrderTolerance, into: &buf)
         FfiConverterOptionUInt32.write(value.maximumForwardDistance, into: &buf)
+        FfiConverterOptionUInt32.write(value.epochSnapshotRetention, into: &buf)
+        FfiConverterOptionUInt64.write(value.snapshotTtlSeconds, into: &buf)
     }
 }
 
