@@ -1911,9 +1911,9 @@ public struct Message: Equatable, Hashable {
      */
     public var eventJson: String
     /**
-     * Timestamp when message was processed (Unix timestamp)
+     * Timestamp when message was created (Unix timestamp)
      */
-    public var processedAt: UInt64
+    public var createdAt: UInt64
     /**
      * Message kind
      */
@@ -1945,8 +1945,8 @@ public struct Message: Equatable, Hashable {
          * JSON representation of the event
          */eventJson: String, 
         /**
-         * Timestamp when message was processed (Unix timestamp)
-         */processedAt: UInt64, 
+         * Timestamp when message was created (Unix timestamp)
+         */createdAt: UInt64, 
         /**
          * Message kind
          */kind: UInt16, 
@@ -1959,7 +1959,7 @@ public struct Message: Equatable, Hashable {
         self.eventId = eventId
         self.senderPubkey = senderPubkey
         self.eventJson = eventJson
-        self.processedAt = processedAt
+        self.createdAt = createdAt
         self.kind = kind
         self.state = state
     }
@@ -1984,7 +1984,7 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
                 eventId: FfiConverterString.read(from: &buf), 
                 senderPubkey: FfiConverterString.read(from: &buf), 
                 eventJson: FfiConverterString.read(from: &buf), 
-                processedAt: FfiConverterUInt64.read(from: &buf), 
+                createdAt: FfiConverterUInt64.read(from: &buf), 
                 kind: FfiConverterUInt16.read(from: &buf), 
                 state: FfiConverterString.read(from: &buf)
         )
@@ -1997,7 +1997,7 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
         FfiConverterString.write(value.eventId, into: &buf)
         FfiConverterString.write(value.senderPubkey, into: &buf)
         FfiConverterString.write(value.eventJson, into: &buf)
-        FfiConverterUInt64.write(value.processedAt, into: &buf)
+        FfiConverterUInt64.write(value.createdAt, into: &buf)
         FfiConverterUInt16.write(value.kind, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
     }
