@@ -2463,6 +2463,14 @@ public enum ProcessMessageResult: Equatable, Hashable {
          * Reason the proposal was ignored
          */reason: String
     )
+    /**
+     * Message was previously marked as failed and cannot be reprocessed
+     *
+     * This is returned when attempting to process a message that previously
+     * failed. Unlike throwing an error, this allows clients to handle the
+     * case gracefully without crashing.
+     */
+    case previouslyFailed
 
 
 
@@ -2502,6 +2510,8 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
         
         case 7: return .ignoredProposal(mlsGroupId: try FfiConverterString.read(from: &buf), reason: try FfiConverterString.read(from: &buf)
         )
+        
+        case 8: return .previouslyFailed
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2546,6 +2556,10 @@ public struct FfiConverterTypeProcessMessageResult: FfiConverterRustBuffer {
             FfiConverterString.write(mlsGroupId, into: &buf)
             FfiConverterString.write(reason, into: &buf)
             
+        
+        case .previouslyFailed:
+            writeInt(&buf, Int32(8))
+        
         }
     }
 }
