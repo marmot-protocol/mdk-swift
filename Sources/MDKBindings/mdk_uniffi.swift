@@ -1231,9 +1231,17 @@ public struct Group: Equatable, Hashable {
      */
     public var lastMessageId: String?
     /**
-     * Timestamp of last message (Unix timestamp)
+     * Timestamp of last message (Unix timestamp, sender's `created_at`)
      */
     public var lastMessageAt: UInt64?
+    /**
+     * Timestamp when the last message was processed/received (Unix timestamp)
+     *
+     * This differs from `last_message_at` which reflects the sender's timestamp.
+     * `last_message_processed_at` reflects when this client received the message,
+     * which may differ due to network delays or clock skew.
+     */
+    public var lastMessageProcessedAt: UInt64?
     /**
      * Current epoch number
      */
@@ -1274,8 +1282,15 @@ public struct Group: Equatable, Hashable {
          * Last message event ID (hex-encoded)
          */lastMessageId: String?, 
         /**
-         * Timestamp of last message (Unix timestamp)
+         * Timestamp of last message (Unix timestamp, sender's `created_at`)
          */lastMessageAt: UInt64?, 
+        /**
+         * Timestamp when the last message was processed/received (Unix timestamp)
+         *
+         * This differs from `last_message_at` which reflects the sender's timestamp.
+         * `last_message_processed_at` reflects when this client received the message,
+         * which may differ due to network delays or clock skew.
+         */lastMessageProcessedAt: UInt64?, 
         /**
          * Current epoch number
          */epoch: UInt64, 
@@ -1292,6 +1307,7 @@ public struct Group: Equatable, Hashable {
         self.adminPubkeys = adminPubkeys
         self.lastMessageId = lastMessageId
         self.lastMessageAt = lastMessageAt
+        self.lastMessageProcessedAt = lastMessageProcessedAt
         self.epoch = epoch
         self.state = state
     }
@@ -1320,6 +1336,7 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
                 adminPubkeys: FfiConverterSequenceString.read(from: &buf), 
                 lastMessageId: FfiConverterOptionString.read(from: &buf), 
                 lastMessageAt: FfiConverterOptionUInt64.read(from: &buf), 
+                lastMessageProcessedAt: FfiConverterOptionUInt64.read(from: &buf), 
                 epoch: FfiConverterUInt64.read(from: &buf), 
                 state: FfiConverterString.read(from: &buf)
         )
@@ -1336,6 +1353,7 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
         FfiConverterSequenceString.write(value.adminPubkeys, into: &buf)
         FfiConverterOptionString.write(value.lastMessageId, into: &buf)
         FfiConverterOptionUInt64.write(value.lastMessageAt, into: &buf)
+        FfiConverterOptionUInt64.write(value.lastMessageProcessedAt, into: &buf)
         FfiConverterUInt64.write(value.epoch, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
     }
@@ -1911,9 +1929,17 @@ public struct Message: Equatable, Hashable {
      */
     public var eventJson: String
     /**
-     * Timestamp when message was created (Unix timestamp)
+     * Timestamp when message was created by the sender (Unix timestamp).
+     * Note: This timestamp comes from the sender's device and may differ
+     * from `processed_at` due to clock skew between devices.
      */
     public var createdAt: UInt64
+    /**
+     * Timestamp when this client processed/received the message (Unix timestamp).
+     * This is useful for clients that want to display messages in the order
+     * they were received locally, rather than in the order they were created.
+     */
+    public var processedAt: UInt64
     /**
      * Message kind
      */
@@ -1945,8 +1971,15 @@ public struct Message: Equatable, Hashable {
          * JSON representation of the event
          */eventJson: String, 
         /**
-         * Timestamp when message was created (Unix timestamp)
+         * Timestamp when message was created by the sender (Unix timestamp).
+         * Note: This timestamp comes from the sender's device and may differ
+         * from `processed_at` due to clock skew between devices.
          */createdAt: UInt64, 
+        /**
+         * Timestamp when this client processed/received the message (Unix timestamp).
+         * This is useful for clients that want to display messages in the order
+         * they were received locally, rather than in the order they were created.
+         */processedAt: UInt64, 
         /**
          * Message kind
          */kind: UInt16, 
@@ -1960,6 +1993,7 @@ public struct Message: Equatable, Hashable {
         self.senderPubkey = senderPubkey
         self.eventJson = eventJson
         self.createdAt = createdAt
+        self.processedAt = processedAt
         self.kind = kind
         self.state = state
     }
@@ -1985,6 +2019,7 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
                 senderPubkey: FfiConverterString.read(from: &buf), 
                 eventJson: FfiConverterString.read(from: &buf), 
                 createdAt: FfiConverterUInt64.read(from: &buf), 
+                processedAt: FfiConverterUInt64.read(from: &buf), 
                 kind: FfiConverterUInt16.read(from: &buf), 
                 state: FfiConverterString.read(from: &buf)
         )
@@ -1998,6 +2033,7 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
         FfiConverterString.write(value.senderPubkey, into: &buf)
         FfiConverterString.write(value.eventJson, into: &buf)
         FfiConverterUInt64.write(value.createdAt, into: &buf)
+        FfiConverterUInt64.write(value.processedAt, into: &buf)
         FfiConverterUInt16.write(value.kind, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
     }
