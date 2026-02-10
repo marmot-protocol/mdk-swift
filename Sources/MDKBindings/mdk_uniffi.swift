@@ -624,6 +624,24 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getGroups() throws  -> [Group]
     
     /**
+     * Get the most recent message in a group according to the given sort order
+     *
+     * This is useful for clients that use `"processed_at_first"` sort order and need
+     * a "last message" value that is consistent with their `get_messages()` ordering.
+     * The cached `group.last_message_id` always reflects `"created_at_first"` ordering.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `sort_order` - Sort order: `"created_at_first"` or `"processed_at_first"`
+     *
+     * # Returns
+     *
+     * Returns the most recent message under the given ordering, or None if the group has no messages
+     */
+    func getLastMessage(mlsGroupId: String, sortOrder: String) throws  -> Message?
+    
+    /**
      * Get members of a group
      */
     func getMembers(mlsGroupId: String) throws  -> [String]
@@ -650,12 +668,13 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * * `mls_group_id` - Hex-encoded MLS group ID
      * * `limit` - Optional maximum number of messages to return (defaults to 1000 if None)
      * * `offset` - Optional number of messages to skip (defaults to 0 if None)
+     * * `sort_order` - Optional sort order: `"created_at_first"` (default) or `"processed_at_first"`
      *
      * # Returns
      *
-     * Returns a vector of messages ordered by creation time
+     * Returns a vector of messages in the requested sort order
      */
-    func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?) throws  -> [Message]
+    func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?, sortOrder: String?) throws  -> [Message]
     
     /**
      * Get pending welcomes with optional pagination
@@ -932,6 +951,32 @@ open func getGroups()throws  -> [Group]  {
 }
     
     /**
+     * Get the most recent message in a group according to the given sort order
+     *
+     * This is useful for clients that use `"processed_at_first"` sort order and need
+     * a "last message" value that is consistent with their `get_messages()` ordering.
+     * The cached `group.last_message_id` always reflects `"created_at_first"` ordering.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `sort_order` - Sort order: `"created_at_first"` or `"processed_at_first"`
+     *
+     * # Returns
+     *
+     * Returns the most recent message under the given ordering, or None if the group has no messages
+     */
+open func getLastMessage(mlsGroupId: String, sortOrder: String)throws  -> Message?  {
+    return try  FfiConverterOptionTypeMessage.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_get_last_message(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterString.lower(sortOrder),$0
+    )
+})
+}
+    
+    /**
      * Get members of a group
      */
 open func getMembers(mlsGroupId: String)throws  -> [String]  {
@@ -973,18 +1018,20 @@ open func getMessage(mlsGroupId: String, eventId: String)throws  -> Message?  {
      * * `mls_group_id` - Hex-encoded MLS group ID
      * * `limit` - Optional maximum number of messages to return (defaults to 1000 if None)
      * * `offset` - Optional number of messages to skip (defaults to 0 if None)
+     * * `sort_order` - Optional sort order: `"created_at_first"` (default) or `"processed_at_first"`
      *
      * # Returns
      *
-     * Returns a vector of messages ordered by creation time
+     * Returns a vector of messages in the requested sort order
      */
-open func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?)throws  -> [Message]  {
+open func getMessages(mlsGroupId: String, limit: UInt32?, offset: UInt32?, sortOrder: String?)throws  -> [Message]  {
     return try  FfiConverterSequenceTypeMessage.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_get_messages(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
         FfiConverterOptionUInt32.lower(limit),
-        FfiConverterOptionUInt32.lower(offset),$0
+        FfiConverterOptionUInt32.lower(offset),
+        FfiConverterOptionString.lower(sortOrder),$0
     )
 })
 }
@@ -3288,13 +3335,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_groups() != 20872) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_last_message() != 16338) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_members() != 9763) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_message() != 47057) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 36057) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_messages() != 47346) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 31211) {
