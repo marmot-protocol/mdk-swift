@@ -278,6 +278,11 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_group(uint64_t ptr, RustBuffer
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event(uint64_t ptr, RustBuffer public_key, RustBuffer relays, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(uint64_t ptr, RustBuffer public_key, RustBuffer relays, int8_t protected, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_message(uint64_t ptr, RustBuffer mls_group_id, RustBuffer sender_public_key, RustBuffer content, uint16_t kind, RustBuffer tags, RustCallStatus *_Nonnull out_status
@@ -731,6 +736,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_group(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with_options(void
     
 );
 #endif

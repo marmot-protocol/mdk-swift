@@ -467,6 +467,30 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -553,8 +577,26 @@ public protocol MdkProtocol: AnyObject, Sendable {
     
     /**
      * Create a key package for a Nostr event
+     *
+     * This function does NOT add the NIP-70 protected tag, ensuring maximum relay
+     * compatibility. Many popular relays (Damus, Primal, nos.lol) reject protected events.
+     * If you need the protected tag, use `create_key_package_for_event_with_options` instead.
      */
     func createKeyPackageForEvent(publicKey: String, relays: [String]) throws  -> KeyPackageResult
+    
+    /**
+     * Create a key package for a Nostr event with additional options
+     *
+     * # Arguments
+     *
+     * * `public_key` - The Nostr public key (hex) for the credential
+     * * `relays` - Relay URLs where the key package will be published
+     * * `protected` - Whether to add the NIP-70 protected tag. When `true`, relays that
+     * implement NIP-70 will reject republishing by third parties. However, many popular
+     * relays reject protected events entirely. Set to `false` for maximum relay
+     * compatibility.
+     */
+    func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], protected: Bool) throws  -> KeyPackageResult
     
     /**
      * Create a message in a group
@@ -790,6 +832,10 @@ open func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [Str
     
     /**
      * Create a key package for a Nostr event
+     *
+     * This function does NOT add the NIP-70 protected tag, ensuring maximum relay
+     * compatibility. Many popular relays (Damus, Primal, nos.lol) reject protected events.
+     * If you need the protected tag, use `create_key_package_for_event_with_options` instead.
      */
 open func createKeyPackageForEvent(publicKey: String, relays: [String])throws  -> KeyPackageResult  {
     return try  FfiConverterTypeKeyPackageResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
@@ -797,6 +843,29 @@ open func createKeyPackageForEvent(publicKey: String, relays: [String])throws  -
             self.uniffiCloneHandle(),
         FfiConverterString.lower(publicKey),
         FfiConverterSequenceString.lower(relays),$0
+    )
+})
+}
+    
+    /**
+     * Create a key package for a Nostr event with additional options
+     *
+     * # Arguments
+     *
+     * * `public_key` - The Nostr public key (hex) for the credential
+     * * `relays` - Relay URLs where the key package will be published
+     * * `protected` - Whether to add the NIP-70 protected tag. When `true`, relays that
+     * implement NIP-70 will reject republishing by third parties. However, many popular
+     * relays reject protected events entirely. Set to `false` for maximum relay
+     * compatibility.
+     */
+open func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], protected: Bool)throws  -> KeyPackageResult  {
+    return try  FfiConverterTypeKeyPackageResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(publicKey),
+        FfiConverterSequenceString.lower(relays),
+        FfiConverterBool.lower(protected),$0
     )
 })
 }
@@ -3198,7 +3267,10 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_group() != 56895) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event() != 48232) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event() != 46847) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with_options() != 59356) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 58601) {
