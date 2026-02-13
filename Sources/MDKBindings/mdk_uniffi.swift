@@ -1834,6 +1834,10 @@ public struct KeyPackageResult: Equatable, Hashable {
      * JSON-encoded tags for the key package event
      */
     public var tags: [[String]]
+    /**
+     * Serialized hash_ref bytes for the key package (for lifecycle tracking)
+     */
+    public var hashRef: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1843,9 +1847,13 @@ public struct KeyPackageResult: Equatable, Hashable {
          */keyPackage: String, 
         /**
          * JSON-encoded tags for the key package event
-         */tags: [[String]]) {
+         */tags: [[String]], 
+        /**
+         * Serialized hash_ref bytes for the key package (for lifecycle tracking)
+         */hashRef: Data) {
         self.keyPackage = keyPackage
         self.tags = tags
+        self.hashRef = hashRef
     }
 
     
@@ -1863,13 +1871,15 @@ public struct FfiConverterTypeKeyPackageResult: FfiConverterRustBuffer {
         return
             try KeyPackageResult(
                 keyPackage: FfiConverterString.read(from: &buf), 
-                tags: FfiConverterSequenceSequenceString.read(from: &buf)
+                tags: FfiConverterSequenceSequenceString.read(from: &buf), 
+                hashRef: FfiConverterData.read(from: &buf)
         )
     }
 
     public static func write(_ value: KeyPackageResult, into buf: inout [UInt8]) {
         FfiConverterString.write(value.keyPackage, into: &buf)
         FfiConverterSequenceSequenceString.write(value.tags, into: &buf)
+        FfiConverterData.write(value.hashRef, into: &buf)
     }
 }
 
