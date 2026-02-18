@@ -701,6 +701,11 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getWelcome(eventId: String) throws  -> Welcome?
     
     /**
+     * Get group IDs that need a self-update (post-join or stale rotation).
+     */
+    func groupsNeedingSelfUpdate(thresholdSecs: UInt64) throws  -> [String]
+    
+    /**
      * Create a proposal to leave the group
      */
     func leaveGroup(mlsGroupId: String) throws  -> UpdateGroupResult
@@ -1083,6 +1088,18 @@ open func getWelcome(eventId: String)throws  -> Welcome?  {
 }
     
     /**
+     * Get group IDs that need a self-update (post-join or stale rotation).
+     */
+open func groupsNeedingSelfUpdate(thresholdSecs: UInt64)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_groups_needing_self_update(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(thresholdSecs),$0
+    )
+})
+}
+    
+    /**
      * Create a proposal to leave the group
      */
 open func leaveGroup(mlsGroupId: String)throws  -> UpdateGroupResult  {
@@ -1366,6 +1383,12 @@ public struct Group: Equatable, Hashable {
      * Group state (e.g., "active", "archived")
      */
     public var state: String
+    /**
+     * Self-update tracking state.
+     * - `"required"`: Must perform a post-join self-update (MIP-02).
+     * - `"completed_at:<unix_timestamp>"`: Last self-update merged at this time (MIP-00).
+     */
+    public var selfUpdateState: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -1412,7 +1435,12 @@ public struct Group: Equatable, Hashable {
          */epoch: UInt64, 
         /**
          * Group state (e.g., "active", "archived")
-         */state: String) {
+         */state: String, 
+        /**
+         * Self-update tracking state.
+         * - `"required"`: Must perform a post-join self-update (MIP-02).
+         * - `"completed_at:<unix_timestamp>"`: Last self-update merged at this time (MIP-00).
+         */selfUpdateState: String) {
         self.mlsGroupId = mlsGroupId
         self.nostrGroupId = nostrGroupId
         self.name = name
@@ -1426,6 +1454,7 @@ public struct Group: Equatable, Hashable {
         self.lastMessageProcessedAt = lastMessageProcessedAt
         self.epoch = epoch
         self.state = state
+        self.selfUpdateState = selfUpdateState
     }
 
     
@@ -1454,7 +1483,8 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
                 lastMessageAt: FfiConverterOptionUInt64.read(from: &buf), 
                 lastMessageProcessedAt: FfiConverterOptionUInt64.read(from: &buf), 
                 epoch: FfiConverterUInt64.read(from: &buf), 
-                state: FfiConverterString.read(from: &buf)
+                state: FfiConverterString.read(from: &buf), 
+                selfUpdateState: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -1472,6 +1502,7 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
         FfiConverterOptionUInt64.write(value.lastMessageProcessedAt, into: &buf)
         FfiConverterUInt64.write(value.epoch, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
+        FfiConverterString.write(value.selfUpdateState, into: &buf)
     }
 }
 
@@ -3364,6 +3395,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_welcome() != 25012) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_groups_needing_self_update() != 16699) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_leave_group() != 46166) {
