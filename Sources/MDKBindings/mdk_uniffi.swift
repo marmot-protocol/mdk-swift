@@ -571,6 +571,21 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func addMembers(mlsGroupId: String, keyPackageEventsJson: [String]) throws  -> UpdateGroupResult
     
     /**
+     * Clear pending commit for a group
+     *
+     * This rolls back the group to its pre-commit state — no epoch advance, no member changes.
+     * Call this when publish exhausts retries to recover from failed relay publishes.
+     *
+     * # Arguments
+     * * `mls_group_id` - The MLS group ID to clear the pending commit for (hex-encoded)
+     *
+     * # Returns
+     * * `Ok(())` - if the pending commit was cleared successfully
+     * * `Err` - if the group doesn't exist or another error occurs
+     */
+    func clearPendingCommit(mlsGroupId: String) throws 
+    
+    /**
      * Create a new group
      */
     func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [String], name: String, description: String, relays: [String], admins: [String]) throws  -> CreateGroupResult
@@ -835,6 +850,27 @@ open func addMembers(mlsGroupId: String, keyPackageEventsJson: [String])throws  
         FfiConverterSequenceString.lower(keyPackageEventsJson),$0
     )
 })
+}
+    
+    /**
+     * Clear pending commit for a group
+     *
+     * This rolls back the group to its pre-commit state — no epoch advance, no member changes.
+     * Call this when publish exhausts retries to recover from failed relay publishes.
+     *
+     * # Arguments
+     * * `mls_group_id` - The MLS group ID to clear the pending commit for (hex-encoded)
+     *
+     * # Returns
+     * * `Ok(())` - if the pending commit was cleared successfully
+     * * `Err` - if the group doesn't exist or another error occurs
+     */
+open func clearPendingCommit(mlsGroupId: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_clear_pending_commit(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),$0
+    )
+}
 }
     
     /**
@@ -3350,6 +3386,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_add_members() != 19089) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_clear_pending_commit() != 50626) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_group() != 56895) {

@@ -268,6 +268,11 @@ void uniffi_mdk_uniffi_fn_method_mdk_accept_welcome_json(uint64_t ptr, RustBuffe
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_add_members(uint64_t ptr, RustBuffer mls_group_id, RustBuffer key_package_events_json, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CLEAR_PENDING_COMMIT
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CLEAR_PENDING_COMMIT
+void uniffi_mdk_uniffi_fn_method_mdk_clear_pending_commit(uint64_t ptr, RustBuffer mls_group_id, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_GROUP
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_GROUP
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_group(uint64_t ptr, RustBuffer creator_public_key, RustBuffer member_key_package_events_json, RustBuffer name, RustBuffer description, RustBuffer relays, RustBuffer admins, RustCallStatus *_Nonnull out_status
@@ -734,6 +739,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome_json(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ADD_MEMBERS
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ADD_MEMBERS
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_add_members(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CLEAR_PENDING_COMMIT
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CLEAR_PENDING_COMMIT
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_clear_pending_commit(void
     
 );
 #endif
