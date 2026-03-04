@@ -811,6 +811,11 @@ open class Mdk: MdkProtocol, @unchecked Sendable {
     // No primary constructor declared for this class.
 
     deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
         try! rustCall { uniffi_mdk_uniffi_fn_free_mdk(handle, $0) }
     }
 
@@ -1319,6 +1324,8 @@ public struct CreateGroupResult: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -1494,6 +1501,8 @@ public struct Group: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -1623,6 +1632,8 @@ public struct GroupDataUpdate: Equatable, Hashable {
         self.relays = relays
         self.admins = admins
     }
+
+    
 
     
 }
@@ -1766,6 +1777,8 @@ public struct GroupImageUpload: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -1849,6 +1862,8 @@ public struct ImageDimensions: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -1924,6 +1939,8 @@ public struct KeyPackageResult: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -1996,6 +2013,13 @@ public struct MdkConfig: Equatable, Hashable {
      */
     public var maximumForwardDistance: UInt32?
     /**
+     * Number of past MLS epochs for which application messages can be decrypted.
+     * When a commit advances the group to epoch N+1, messages from epoch N that arrive
+     * late can still be decrypted if the epoch delta is within this window.
+     * Default: 5
+     */
+    public var maxPastEpochs: UInt32?
+    /**
      * Number of epoch snapshots to retain for rollback support.
      * Default: 5
      */
@@ -2028,6 +2052,12 @@ public struct MdkConfig: Equatable, Hashable {
          * Default: 1000
          */maximumForwardDistance: UInt32?, 
         /**
+         * Number of past MLS epochs for which application messages can be decrypted.
+         * When a commit advances the group to epoch N+1, messages from epoch N that arrive
+         * late can still be decrypted if the epoch delta is within this window.
+         * Default: 5
+         */maxPastEpochs: UInt32?, 
+        /**
          * Number of epoch snapshots to retain for rollback support.
          * Default: 5
          */epochSnapshotRetention: UInt32?, 
@@ -2040,9 +2070,12 @@ public struct MdkConfig: Equatable, Hashable {
         self.maxFutureSkewSecs = maxFutureSkewSecs
         self.outOfOrderTolerance = outOfOrderTolerance
         self.maximumForwardDistance = maximumForwardDistance
+        self.maxPastEpochs = maxPastEpochs
         self.epochSnapshotRetention = epochSnapshotRetention
         self.snapshotTtlSeconds = snapshotTtlSeconds
     }
+
+    
 
     
 }
@@ -2062,6 +2095,7 @@ public struct FfiConverterTypeMdkConfig: FfiConverterRustBuffer {
                 maxFutureSkewSecs: FfiConverterOptionUInt64.read(from: &buf), 
                 outOfOrderTolerance: FfiConverterOptionUInt32.read(from: &buf), 
                 maximumForwardDistance: FfiConverterOptionUInt32.read(from: &buf), 
+                maxPastEpochs: FfiConverterOptionUInt32.read(from: &buf), 
                 epochSnapshotRetention: FfiConverterOptionUInt32.read(from: &buf), 
                 snapshotTtlSeconds: FfiConverterOptionUInt64.read(from: &buf)
         )
@@ -2072,6 +2106,7 @@ public struct FfiConverterTypeMdkConfig: FfiConverterRustBuffer {
         FfiConverterOptionUInt64.write(value.maxFutureSkewSecs, into: &buf)
         FfiConverterOptionUInt32.write(value.outOfOrderTolerance, into: &buf)
         FfiConverterOptionUInt32.write(value.maximumForwardDistance, into: &buf)
+        FfiConverterOptionUInt32.write(value.maxPastEpochs, into: &buf)
         FfiConverterOptionUInt32.write(value.epochSnapshotRetention, into: &buf)
         FfiConverterOptionUInt64.write(value.snapshotTtlSeconds, into: &buf)
     }
@@ -2192,6 +2227,8 @@ public struct Message: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -2281,6 +2318,8 @@ public struct UpdateGroupResult: Equatable, Hashable {
         self.welcomeRumorsJson = welcomeRumorsJson
         self.mlsGroupId = mlsGroupId
     }
+
+    
 
     
 }
@@ -2456,6 +2495,8 @@ public struct Welcome: Equatable, Hashable {
     }
 
     
+
+    
 }
 
 #if compiler(>=6)
@@ -2544,6 +2585,8 @@ public enum MdkUniffiError: Swift.Error, Equatable, Hashable, Foundation.Localiz
      */
     case InvalidInput(String
     )
+
+    
 
     
 
@@ -2700,6 +2743,8 @@ public enum ProcessMessageResult: Equatable, Hashable {
      * case gracefully without crashing.
      */
     case previouslyFailed
+
+
 
 
 
