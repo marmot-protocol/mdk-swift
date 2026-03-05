@@ -288,6 +288,11 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event(uint64_t
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(uint64_t ptr, RustBuffer public_key, RustBuffer relays, int8_t protected, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MEDIA_IMETA_TAG
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MEDIA_IMETA_TAG
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_media_imeta_tag(uint64_t ptr, RustBuffer mls_group_id, RustBuffer upload, RustBuffer uploaded_url, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MESSAGE
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_message(uint64_t ptr, RustBuffer mls_group_id, RustBuffer sender_public_key, RustBuffer content, uint16_t kind, RustBuffer tags, RustCallStatus *_Nonnull out_status
@@ -301,6 +306,21 @@ void uniffi_mdk_uniffi_fn_method_mdk_decline_welcome(uint64_t ptr, RustBuffer we
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME_JSON
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECLINE_WELCOME_JSON
 void uniffi_mdk_uniffi_fn_method_mdk_decline_welcome_json(uint64_t ptr, RustBuffer welcome_json, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECRYPT_MEDIA_FROM_DOWNLOAD
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_DECRYPT_MEDIA_FROM_DOWNLOAD
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_decrypt_media_from_download(uint64_t ptr, RustBuffer mls_group_id, RustBuffer encrypted_data, RustBuffer reference, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_encrypt_media_for_upload(uint64_t ptr, RustBuffer mls_group_id, RustBuffer data, RustBuffer mime_type, RustBuffer filename, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD_WITH_OPTIONS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD_WITH_OPTIONS
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_encrypt_media_for_upload_with_options(uint64_t ptr, RustBuffer mls_group_id, RustBuffer data, RustBuffer mime_type, RustBuffer filename, RustBuffer options, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GET_GROUP
@@ -366,6 +386,11 @@ void uniffi_mdk_uniffi_fn_method_mdk_merge_pending_commit(uint64_t ptr, RustBuff
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_KEY_PACKAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_KEY_PACKAGE
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_parse_key_package(uint64_t ptr, RustBuffer event_json, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_MEDIA_IMETA_TAG
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PARSE_MEDIA_IMETA_TAG
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_parse_media_imeta_tag(uint64_t ptr, RustBuffer mls_group_id, RustBuffer imeta_tag, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_PROCESS_MESSAGE
@@ -766,6 +791,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_MEDIA_IMETA_TAG
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_MEDIA_IMETA_TAG
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_media_imeta_tag(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_CREATE_MESSAGE
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_create_message(void
@@ -781,6 +812,24 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME_JSON
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECLINE_WELCOME_JSON
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECRYPT_MEDIA_FROM_DOWNLOAD
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_DECRYPT_MEDIA_FROM_DOWNLOAD
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_decrypt_media_from_download(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD_WITH_OPTIONS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_ENCRYPT_MEDIA_FOR_UPLOAD_WITH_OPTIONS
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload_with_options(void
     
 );
 #endif
@@ -859,6 +908,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_merge_pending_commit(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_PARSE_KEY_PACKAGE
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_PARSE_KEY_PACKAGE
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_parse_key_package(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_PARSE_MEDIA_IMETA_TAG
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_PARSE_MEDIA_IMETA_TAG
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_parse_media_imeta_tag(void
     
 );
 #endif

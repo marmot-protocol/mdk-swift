@@ -614,6 +614,22 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], protected: Bool) throws  -> KeyPackageResult
     
     /**
+     * Build an IMETA tag for an encrypted media upload
+     *
+     * Creates the IMETA Nostr tag per the MIP-04 specification. Attach this tag
+     * to the group message event after uploading the encrypted bytes to Blossom.
+     *
+     * Returns the tag as a `Vec<Vec<String>>` (the standard UniFFI tag format).
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `upload` - The result returned by `encrypt_media_for_upload`
+     * * `uploaded_url` - The URL returned by the Blossom server after upload
+     */
+    func createMediaImetaTag(mlsGroupId: String, upload: EncryptedMediaUploadResult, uploadedUrl: String) throws  -> [[String]]
+    
+    /**
      * Create a message in a group
      */
     func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?) throws  -> String
@@ -627,6 +643,61 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Decline a welcome message from JSON
      */
     func declineWelcomeJson(welcomeJson: String) throws 
+    
+    /**
+     * Decrypt media downloaded from a Blossom server
+     *
+     * Decrypts the encrypted bytes using the key derived from the group's MLS
+     * epoch that was active when the file was encrypted (looked up automatically
+     * via the epoch hint stored alongside the message). Falls back to the current
+     * epoch if no hint is available.
+     *
+     * The `reference` parameter is typically obtained by calling
+     * `parse_media_imeta_tag` on the IMETA tag attached to the message.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `encrypted_data` - Encrypted bytes downloaded from the Blossom server
+     * * `reference` - Parsed media reference (from `parse_media_imeta_tag`)
+     */
+    func decryptMediaFromDownload(mlsGroupId: String, encryptedData: Data, reference: MediaReferenceRecord) throws  -> Data
+    
+    /**
+     * Encrypt media for upload using default processing options
+     *
+     * Encrypts the supplied media file with the group's current MLS epoch key,
+     * producing ciphertext ready to upload to a Blossom server. Images are
+     * automatically EXIF-sanitized and a blurhash preview is generated.
+     *
+     * After uploading the encrypted bytes, call `create_media_imeta_tag` with
+     * the returned result and the Blossom URL to build the IMETA tag to attach
+     * to the group message.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `data` - Raw media file bytes
+     * * `mime_type` - MIME type of the media (e.g. `"image/jpeg"`)
+     * * `filename` - Original filename (used as AAD in the encryption)
+     */
+    func encryptMediaForUpload(mlsGroupId: String, data: Data, mimeType: String, filename: String) throws  -> EncryptedMediaUploadResult
+    
+    /**
+     * Encrypt media for upload with custom processing options
+     *
+     * Same as `encrypt_media_for_upload` but lets you override EXIF sanitization,
+     * blurhash generation, and size/dimension limits.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `data` - Raw media file bytes
+     * * `mime_type` - MIME type of the media (e.g. `"image/jpeg"`)
+     * * `filename` - Original filename (used as AAD in the encryption)
+     * * `options` - Custom processing options
+     */
+    func encryptMediaForUploadWithOptions(mlsGroupId: String, data: Data, mimeType: String, filename: String, options: MediaProcessingOptionsInput) throws  -> EncryptedMediaUploadResult
     
     /**
      * Get a group by MLS group ID
@@ -734,6 +805,24 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Parse a key package from a Nostr event
      */
     func parseKeyPackage(eventJson: String) throws  -> String
+    
+    /**
+     * Parse an IMETA tag into a `MediaReferenceRecord` for decryption
+     *
+     * Validates and decodes the IMETA tag fields according to the MIP-04
+     * specification. The returned record can be passed directly to
+     * `decrypt_media_from_download`.
+     *
+     * The tag must be provided as a single-element `Vec<Vec<String>>` — the
+     * same format returned by `create_media_imeta_tag` and the standard UniFFI
+     * tag wire format.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `imeta_tag` - IMETA tag as `Vec<Vec<String>>`
+     */
+    func parseMediaImetaTag(mlsGroupId: String, imetaTag: [[String]]) throws  -> MediaReferenceRecord
     
     /**
      * Process an incoming MLS message
@@ -936,6 +1025,31 @@ open func createKeyPackageForEventWithOptions(publicKey: String, relays: [String
 }
     
     /**
+     * Build an IMETA tag for an encrypted media upload
+     *
+     * Creates the IMETA Nostr tag per the MIP-04 specification. Attach this tag
+     * to the group message event after uploading the encrypted bytes to Blossom.
+     *
+     * Returns the tag as a `Vec<Vec<String>>` (the standard UniFFI tag format).
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `upload` - The result returned by `encrypt_media_for_upload`
+     * * `uploaded_url` - The URL returned by the Blossom server after upload
+     */
+open func createMediaImetaTag(mlsGroupId: String, upload: EncryptedMediaUploadResult, uploadedUrl: String)throws  -> [[String]]  {
+    return try  FfiConverterSequenceSequenceString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_create_media_imeta_tag(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterTypeEncryptedMediaUploadResult_lower(upload),
+        FfiConverterString.lower(uploadedUrl),$0
+    )
+})
+}
+    
+    /**
      * Create a message in a group
      */
 open func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?)throws  -> String  {
@@ -971,6 +1085,91 @@ open func declineWelcomeJson(welcomeJson: String)throws   {try rustCallWithError
         FfiConverterString.lower(welcomeJson),$0
     )
 }
+}
+    
+    /**
+     * Decrypt media downloaded from a Blossom server
+     *
+     * Decrypts the encrypted bytes using the key derived from the group's MLS
+     * epoch that was active when the file was encrypted (looked up automatically
+     * via the epoch hint stored alongside the message). Falls back to the current
+     * epoch if no hint is available.
+     *
+     * The `reference` parameter is typically obtained by calling
+     * `parse_media_imeta_tag` on the IMETA tag attached to the message.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `encrypted_data` - Encrypted bytes downloaded from the Blossom server
+     * * `reference` - Parsed media reference (from `parse_media_imeta_tag`)
+     */
+open func decryptMediaFromDownload(mlsGroupId: String, encryptedData: Data, reference: MediaReferenceRecord)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_decrypt_media_from_download(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterData.lower(encryptedData),
+        FfiConverterTypeMediaReferenceRecord_lower(reference),$0
+    )
+})
+}
+    
+    /**
+     * Encrypt media for upload using default processing options
+     *
+     * Encrypts the supplied media file with the group's current MLS epoch key,
+     * producing ciphertext ready to upload to a Blossom server. Images are
+     * automatically EXIF-sanitized and a blurhash preview is generated.
+     *
+     * After uploading the encrypted bytes, call `create_media_imeta_tag` with
+     * the returned result and the Blossom URL to build the IMETA tag to attach
+     * to the group message.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `data` - Raw media file bytes
+     * * `mime_type` - MIME type of the media (e.g. `"image/jpeg"`)
+     * * `filename` - Original filename (used as AAD in the encryption)
+     */
+open func encryptMediaForUpload(mlsGroupId: String, data: Data, mimeType: String, filename: String)throws  -> EncryptedMediaUploadResult  {
+    return try  FfiConverterTypeEncryptedMediaUploadResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_encrypt_media_for_upload(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterData.lower(data),
+        FfiConverterString.lower(mimeType),
+        FfiConverterString.lower(filename),$0
+    )
+})
+}
+    
+    /**
+     * Encrypt media for upload with custom processing options
+     *
+     * Same as `encrypt_media_for_upload` but lets you override EXIF sanitization,
+     * blurhash generation, and size/dimension limits.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `data` - Raw media file bytes
+     * * `mime_type` - MIME type of the media (e.g. `"image/jpeg"`)
+     * * `filename` - Original filename (used as AAD in the encryption)
+     * * `options` - Custom processing options
+     */
+open func encryptMediaForUploadWithOptions(mlsGroupId: String, data: Data, mimeType: String, filename: String, options: MediaProcessingOptionsInput)throws  -> EncryptedMediaUploadResult  {
+    return try  FfiConverterTypeEncryptedMediaUploadResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_encrypt_media_for_upload_with_options(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterData.lower(data),
+        FfiConverterString.lower(mimeType),
+        FfiConverterString.lower(filename),
+        FfiConverterTypeMediaProcessingOptionsInput_lower(options),$0
+    )
+})
 }
     
     /**
@@ -1176,6 +1375,32 @@ open func parseKeyPackage(eventJson: String)throws  -> String  {
 }
     
     /**
+     * Parse an IMETA tag into a `MediaReferenceRecord` for decryption
+     *
+     * Validates and decodes the IMETA tag fields according to the MIP-04
+     * specification. The returned record can be passed directly to
+     * `decrypt_media_from_download`.
+     *
+     * The tag must be provided as a single-element `Vec<Vec<String>>` — the
+     * same format returned by `create_media_imeta_tag` and the standard UniFFI
+     * tag wire format.
+     *
+     * # Arguments
+     *
+     * * `mls_group_id` - Hex-encoded MLS group ID
+     * * `imeta_tag` - IMETA tag as `Vec<Vec<String>>`
+     */
+open func parseMediaImetaTag(mlsGroupId: String, imetaTag: [[String]])throws  -> MediaReferenceRecord  {
+    return try  FfiConverterTypeMediaReferenceRecord_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_parse_media_imeta_tag(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),
+        FfiConverterSequenceSequenceString.lower(imetaTag),$0
+    )
+})
+}
+    
+    /**
      * Process an incoming MLS message
      */
 open func processMessage(eventJson: String)throws  -> ProcessMessageResult  {
@@ -1363,6 +1588,158 @@ public func FfiConverterTypeCreateGroupResult_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeCreateGroupResult_lower(_ value: CreateGroupResult) -> RustBuffer {
     return FfiConverterTypeCreateGroupResult.lower(value)
+}
+
+
+/**
+ * Result of encrypting media for upload
+ *
+ * Contains the encrypted bytes ready for upload to a Blossom server, along
+ * with the metadata required to build the IMETA tag and later decrypt the file.
+ */
+public struct EncryptedMediaUploadResult: Equatable, Hashable {
+    /**
+     * Encrypted media bytes — upload these to your Blossom server
+     */
+    public var encryptedData: Data
+    /**
+     * SHA-256 hash of the original (pre-encryption, post-sanitization) data
+     */
+    public var originalHash: Data
+    /**
+     * SHA-256 hash of the encrypted data — verify against the Blossom server response
+     */
+    public var encryptedHash: Data
+    /**
+     * Canonical MIME type of the original media (e.g. `"image/webp"`)
+     */
+    public var mimeType: String
+    /**
+     * Original filename
+     */
+    public var filename: String
+    /**
+     * Size of the original data in bytes
+     */
+    public var originalSize: UInt64
+    /**
+     * Size of the encrypted data in bytes
+     */
+    public var encryptedSize: UInt64
+    /**
+     * Image dimensions `[width, height]` if the media is an image, otherwise `None`
+     */
+    public var dimensions: [UInt32]?
+    /**
+     * Blurhash preview string if generated, otherwise `None`
+     */
+    public var blurhash: String?
+    /**
+     * 12-byte ChaCha20-Poly1305 nonce used for encryption
+     */
+    public var nonce: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Encrypted media bytes — upload these to your Blossom server
+         */encryptedData: Data, 
+        /**
+         * SHA-256 hash of the original (pre-encryption, post-sanitization) data
+         */originalHash: Data, 
+        /**
+         * SHA-256 hash of the encrypted data — verify against the Blossom server response
+         */encryptedHash: Data, 
+        /**
+         * Canonical MIME type of the original media (e.g. `"image/webp"`)
+         */mimeType: String, 
+        /**
+         * Original filename
+         */filename: String, 
+        /**
+         * Size of the original data in bytes
+         */originalSize: UInt64, 
+        /**
+         * Size of the encrypted data in bytes
+         */encryptedSize: UInt64, 
+        /**
+         * Image dimensions `[width, height]` if the media is an image, otherwise `None`
+         */dimensions: [UInt32]?, 
+        /**
+         * Blurhash preview string if generated, otherwise `None`
+         */blurhash: String?, 
+        /**
+         * 12-byte ChaCha20-Poly1305 nonce used for encryption
+         */nonce: Data) {
+        self.encryptedData = encryptedData
+        self.originalHash = originalHash
+        self.encryptedHash = encryptedHash
+        self.mimeType = mimeType
+        self.filename = filename
+        self.originalSize = originalSize
+        self.encryptedSize = encryptedSize
+        self.dimensions = dimensions
+        self.blurhash = blurhash
+        self.nonce = nonce
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EncryptedMediaUploadResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEncryptedMediaUploadResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EncryptedMediaUploadResult {
+        return
+            try EncryptedMediaUploadResult(
+                encryptedData: FfiConverterData.read(from: &buf), 
+                originalHash: FfiConverterData.read(from: &buf), 
+                encryptedHash: FfiConverterData.read(from: &buf), 
+                mimeType: FfiConverterString.read(from: &buf), 
+                filename: FfiConverterString.read(from: &buf), 
+                originalSize: FfiConverterUInt64.read(from: &buf), 
+                encryptedSize: FfiConverterUInt64.read(from: &buf), 
+                dimensions: FfiConverterOptionSequenceUInt32.read(from: &buf), 
+                blurhash: FfiConverterOptionString.read(from: &buf), 
+                nonce: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EncryptedMediaUploadResult, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.encryptedData, into: &buf)
+        FfiConverterData.write(value.originalHash, into: &buf)
+        FfiConverterData.write(value.encryptedHash, into: &buf)
+        FfiConverterString.write(value.mimeType, into: &buf)
+        FfiConverterString.write(value.filename, into: &buf)
+        FfiConverterUInt64.write(value.originalSize, into: &buf)
+        FfiConverterUInt64.write(value.encryptedSize, into: &buf)
+        FfiConverterOptionSequenceUInt32.write(value.dimensions, into: &buf)
+        FfiConverterOptionString.write(value.blurhash, into: &buf)
+        FfiConverterData.write(value.nonce, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEncryptedMediaUploadResult_lift(_ buf: RustBuffer) throws -> EncryptedMediaUploadResult {
+    return try FfiConverterTypeEncryptedMediaUploadResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEncryptedMediaUploadResult_lower(_ value: EncryptedMediaUploadResult) -> RustBuffer {
+    return FfiConverterTypeEncryptedMediaUploadResult.lower(value)
 }
 
 
@@ -2125,6 +2502,234 @@ public func FfiConverterTypeMdkConfig_lift(_ buf: RustBuffer) throws -> MdkConfi
 #endif
 public func FfiConverterTypeMdkConfig_lower(_ value: MdkConfig) -> RustBuffer {
     return FfiConverterTypeMdkConfig.lower(value)
+}
+
+
+/**
+ * Options for controlling media processing during encryption
+ *
+ * `max_dimension`, `max_file_size`, and `max_filename_length` are optional and
+ * fall back to sensible, privacy-first defaults when `None`.
+ * `sanitize_exif` and `generate_blurhash` are explicit toggles; pass `None` to
+ * accept the privacy-first defaults (`true` for both).
+ * To use all defaults without constructing this struct, call
+ * `encrypt_media_for_upload`.
+ */
+public struct MediaProcessingOptionsInput: Equatable, Hashable {
+    /**
+     * Strip EXIF and other metadata from images for privacy (default: `true`)
+     */
+    public var sanitizeExif: Bool?
+    /**
+     * Generate a blurhash preview string for images (default: `true`)
+     */
+    public var generateBlurhash: Bool?
+    /**
+     * Maximum allowed image dimension in pixels (default: 16384)
+     */
+    public var maxDimension: UInt32?
+    /**
+     * Maximum allowed file size in bytes (default: 100 MiB)
+     */
+    public var maxFileSize: UInt64?
+    /**
+     * Maximum allowed filename length in characters (default: 210)
+     */
+    public var maxFilenameLength: UInt64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Strip EXIF and other metadata from images for privacy (default: `true`)
+         */sanitizeExif: Bool?, 
+        /**
+         * Generate a blurhash preview string for images (default: `true`)
+         */generateBlurhash: Bool?, 
+        /**
+         * Maximum allowed image dimension in pixels (default: 16384)
+         */maxDimension: UInt32?, 
+        /**
+         * Maximum allowed file size in bytes (default: 100 MiB)
+         */maxFileSize: UInt64?, 
+        /**
+         * Maximum allowed filename length in characters (default: 210)
+         */maxFilenameLength: UInt64?) {
+        self.sanitizeExif = sanitizeExif
+        self.generateBlurhash = generateBlurhash
+        self.maxDimension = maxDimension
+        self.maxFileSize = maxFileSize
+        self.maxFilenameLength = maxFilenameLength
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MediaProcessingOptionsInput: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMediaProcessingOptionsInput: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MediaProcessingOptionsInput {
+        return
+            try MediaProcessingOptionsInput(
+                sanitizeExif: FfiConverterOptionBool.read(from: &buf), 
+                generateBlurhash: FfiConverterOptionBool.read(from: &buf), 
+                maxDimension: FfiConverterOptionUInt32.read(from: &buf), 
+                maxFileSize: FfiConverterOptionUInt64.read(from: &buf), 
+                maxFilenameLength: FfiConverterOptionUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MediaProcessingOptionsInput, into buf: inout [UInt8]) {
+        FfiConverterOptionBool.write(value.sanitizeExif, into: &buf)
+        FfiConverterOptionBool.write(value.generateBlurhash, into: &buf)
+        FfiConverterOptionUInt32.write(value.maxDimension, into: &buf)
+        FfiConverterOptionUInt64.write(value.maxFileSize, into: &buf)
+        FfiConverterOptionUInt64.write(value.maxFilenameLength, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMediaProcessingOptionsInput_lift(_ buf: RustBuffer) throws -> MediaProcessingOptionsInput {
+    return try FfiConverterTypeMediaProcessingOptionsInput.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMediaProcessingOptionsInput_lower(_ value: MediaProcessingOptionsInput) -> RustBuffer {
+    return FfiConverterTypeMediaProcessingOptionsInput.lower(value)
+}
+
+
+/**
+ * A reference to an encrypted media file stored on a Blossom server
+ *
+ * This is parsed from an IMETA tag (via `parse_media_imeta_tag`) and passed
+ * to `decrypt_media_from_download` to retrieve the original file.
+ */
+public struct MediaReferenceRecord: Equatable, Hashable {
+    /**
+     * URL where the encrypted file is stored
+     */
+    public var url: String
+    /**
+     * SHA-256 hash of the original (pre-encryption) data — 32 bytes
+     */
+    public var originalHash: Data
+    /**
+     * MIME type of the original media
+     */
+    public var mimeType: String
+    /**
+     * Original filename
+     */
+    public var filename: String
+    /**
+     * Image dimensions `[width, height]` if the media is an image, otherwise `None`
+     */
+    public var dimensions: [UInt32]?
+    /**
+     * Encryption scheme version (e.g. `"mip04-v2"`)
+     */
+    public var schemeVersion: String
+    /**
+     * 12-byte ChaCha20-Poly1305 nonce — 12 bytes
+     */
+    public var nonce: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * URL where the encrypted file is stored
+         */url: String, 
+        /**
+         * SHA-256 hash of the original (pre-encryption) data — 32 bytes
+         */originalHash: Data, 
+        /**
+         * MIME type of the original media
+         */mimeType: String, 
+        /**
+         * Original filename
+         */filename: String, 
+        /**
+         * Image dimensions `[width, height]` if the media is an image, otherwise `None`
+         */dimensions: [UInt32]?, 
+        /**
+         * Encryption scheme version (e.g. `"mip04-v2"`)
+         */schemeVersion: String, 
+        /**
+         * 12-byte ChaCha20-Poly1305 nonce — 12 bytes
+         */nonce: Data) {
+        self.url = url
+        self.originalHash = originalHash
+        self.mimeType = mimeType
+        self.filename = filename
+        self.dimensions = dimensions
+        self.schemeVersion = schemeVersion
+        self.nonce = nonce
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MediaReferenceRecord: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMediaReferenceRecord: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MediaReferenceRecord {
+        return
+            try MediaReferenceRecord(
+                url: FfiConverterString.read(from: &buf), 
+                originalHash: FfiConverterData.read(from: &buf), 
+                mimeType: FfiConverterString.read(from: &buf), 
+                filename: FfiConverterString.read(from: &buf), 
+                dimensions: FfiConverterOptionSequenceUInt32.read(from: &buf), 
+                schemeVersion: FfiConverterString.read(from: &buf), 
+                nonce: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MediaReferenceRecord, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterData.write(value.originalHash, into: &buf)
+        FfiConverterString.write(value.mimeType, into: &buf)
+        FfiConverterString.write(value.filename, into: &buf)
+        FfiConverterOptionSequenceUInt32.write(value.dimensions, into: &buf)
+        FfiConverterString.write(value.schemeVersion, into: &buf)
+        FfiConverterData.write(value.nonce, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMediaReferenceRecord_lift(_ buf: RustBuffer) throws -> MediaReferenceRecord {
+    return try FfiConverterTypeMediaReferenceRecord.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMediaReferenceRecord_lower(_ value: MediaReferenceRecord) -> RustBuffer {
+    return FfiConverterTypeMediaReferenceRecord.lower(value)
 }
 
 
@@ -2905,6 +3510,30 @@ fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -3097,6 +3726,30 @@ fileprivate struct FfiConverterOptionOptionData: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceUInt32.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceUInt32.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]?
 
@@ -3139,6 +3792,31 @@ fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuf
         case 1: return try FfiConverterSequenceSequenceString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]
+
+    public static func write(_ value: [UInt32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt32.read(from: &buf))
+        }
+        return seq
     }
 }
 
@@ -3445,6 +4123,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with_options() != 59356) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_media_imeta_tag() != 4917) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 58601) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -3452,6 +4133,15 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome_json() != 21478) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_decrypt_media_from_download() != 48593) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload() != 41485) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload_with_options() != 55124) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_group() != 1495) {
@@ -3491,6 +4181,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_parse_key_package() != 41870) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_parse_media_imeta_tag() != 60768) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_process_message() != 15589) {
