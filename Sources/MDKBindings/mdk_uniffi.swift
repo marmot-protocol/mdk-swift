@@ -630,9 +630,14 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func createMediaImetaTag(mlsGroupId: String, upload: EncryptedMediaUploadResult, uploadedUrl: String) throws  -> [[String]]
     
     /**
-     * Create a message in a group
+     * Create a message in a group.
+     *
+     * `tags` are appended to the rumor and therefore are encrypted.
+     *
+     * `event_tags` are appended to the outer kind:445 wrapper event. Only a subset
+     * of tags are allowed; see [`EventTag`] for the full list.
      */
-    func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?) throws  -> String
+    func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?, eventTags: [[String]]?) throws  -> String
     
     /**
      * Decline a welcome message
@@ -664,11 +669,46 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func decryptMediaFromDownload(mlsGroupId: String, encryptedData: Data, reference: MediaReferenceRecord) throws  -> Data
     
     /**
+     * Delete all local state for a group.
+     */
+    func deleteGroup(mlsGroupId: String) throws 
+    
+    /**
+     * Delete a key package from MLS storage using a key package Nostr event
+     *
+     * Parses the key package from the given kind-443 event and removes it
+     * from the MLS provider's storage.
+     *
+     * # Arguments
+     *
+     * * `key_package_event_json` - JSON-encoded Nostr key package event (kind 443)
+     */
+    func deleteKeyPackageFromStorage(keyPackageEventJson: String) throws 
+    
+    /**
+     * Delete a key package from storage using previously serialized hash_ref bytes
+     *
+     * The `hash_ref` should be the bytes returned as the third element of
+     * `create_key_package_for_event`.
+     *
+     * # Arguments
+     *
+     * * `hash_ref` - Serialized hash reference bytes from key package creation
+     */
+    func deleteKeyPackageFromStorageByHashRef(hashRef: Data) throws 
+    
+    /**
+     * Delete all locally stored messages for a group.
+     */
+    func deleteMessagesForGroup(mlsGroupId: String) throws  -> UInt32
+    
+    /**
      * Encrypt media for upload using default processing options
      *
      * Encrypts the supplied media file with the group's current MLS epoch key,
      * producing ciphertext ready to upload to a Blossom server. Images are
-     * automatically EXIF-sanitized and a blurhash preview is generated.
+     * automatically EXIF-sanitized and blurhash/thumbhash preview hashes are
+     * generated.
      *
      * After uploading the encrypted bytes, call `create_media_imeta_tag` with
      * the returned result and the Blossom URL to build the IMETA tag to attach
@@ -686,8 +726,8 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Encrypt media for upload with custom processing options
      *
-     * Same as `encrypt_media_for_upload` but lets you override EXIF sanitization,
-     * blurhash generation, and size/dimension limits.
+     * Same as `encrypt_media_for_upload` but lets you override EXIF
+     * sanitization, preview hash generation, and size/dimension limits.
      *
      * # Arguments
      *
@@ -777,6 +817,19 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getPendingWelcomes(limit: UInt32?, offset: UInt32?) throws  -> [Welcome]
     
     /**
+     * Get public information about the ratchet tree of an MLS group
+     *
+     * This includes a SHA-256 fingerprint of the TLS-serialized ratchet tree,
+     * the full serialized tree as hex, and a list of leaf nodes with their
+     * indices and public keys.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func getRatchetTreeInfo(groupIdHex: String) throws  -> UniffiRatchetTreeInfo
+    
+    /**
      * Get relays for a group
      */
     func getRelays(mlsGroupId: String) throws  -> [String]
@@ -785,6 +838,36 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Get a welcome by event ID
      */
     func getWelcome(eventId: String) throws  -> Welcome?
+    
+    /**
+     * Returns the current active MLS leaf positions and their bound Nostr public keys
+     *
+     * Returns a list of (leaf_index, public_key_hex) pairs. Removed-member tree
+     * holes are omitted.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func groupLeafMap(groupIdHex: String) throws  -> [LeafMapEntry]
+    
+    /**
+     * Returns the proposal types required of every member of this group.
+     *
+     * Branch UI on this set — e.g. when `SelfRemove` is present, a
+     * non-admin member can leave the group without an admin commit.
+     * An empty vector means the group has no required proposals
+     * (the LCD outcome for mixed or empty-invitee groups); a missing
+     * group is reported as an error instead.
+     *
+     * Result order is deterministic (sorted by the underlying
+     * `BTreeSet` iteration order) so diffing across calls is stable.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func groupRequiredProposals(groupIdHex: String) throws  -> [MdkProposalType]
     
     /**
      * Get group IDs that need a self-update (post-join or stale rotation).
@@ -800,6 +883,15 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Merge pending commit for a group
      */
     func mergePendingCommit(mlsGroupId: String) throws 
+    
+    /**
+     * Returns the local member's current MLS leaf index for a group
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func ownLeafIndex(groupIdHex: String) throws  -> UInt32
     
     /**
      * Parse a key package from a Nostr event
@@ -825,9 +917,55 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func parseMediaImetaTag(mlsGroupId: String, imetaTag: [[String]]) throws  -> MediaReferenceRecord
     
     /**
+     * Gets the public keys of members that will be added from pending proposals
+     *
+     * Returns hex-encoded public keys of members in pending Add proposals.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func pendingAddedMembersPubkeys(groupIdHex: String) throws  -> [String]
+    
+    /**
+     * Gets all pending member changes (additions and removals) from pending proposals
+     *
+     * Returns a combined view of all pending member changes in a group.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func pendingMemberChanges(groupIdHex: String) throws  -> UniffiPendingMemberChanges
+    
+    /**
+     * Gets the public keys of members that will be removed from pending proposals
+     *
+     * Returns hex-encoded public keys of members in pending Remove proposals.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func pendingRemovedMembersPubkeys(groupIdHex: String) throws  -> [String]
+    
+    /**
      * Process an incoming MLS message
      */
     func processMessage(eventJson: String) throws  -> ProcessMessageResult
+    
+    /**
+     * Process an incoming MLS message and return the result with additional MLS context
+     *
+     * Unlike `process_message`, this method also returns transient MLS context
+     * such as the sender's leaf index, which is useful for UI display or
+     * verification purposes.
+     *
+     * # Arguments
+     *
+     * * `event_json` - JSON-encoded Nostr event containing the MLS message
+     */
+    func processMessageWithContext(eventJson: String) throws  -> ProcessMessageWithContextResult
     
     /**
      * Process a welcome message
@@ -838,6 +976,14 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Remove members from a group
      */
     func removeMembers(mlsGroupId: String, memberPublicKeys: [String]) throws  -> UpdateGroupResult
+    
+    /**
+     * Self-demote from admin status before leaving a group.
+     *
+     * Per MIP-03, admins must call this before leave_group(). If the caller is
+     * the last admin, they must designate a successor via update_group_data first.
+     */
+    func selfDemote(mlsGroupId: String) throws  -> UpdateGroupResult
     
     /**
      * Update the current member's leaf node in an MLS group
@@ -1050,9 +1196,14 @@ open func createMediaImetaTag(mlsGroupId: String, upload: EncryptedMediaUploadRe
 }
     
     /**
-     * Create a message in a group
+     * Create a message in a group.
+     *
+     * `tags` are appended to the rumor and therefore are encrypted.
+     *
+     * `event_tags` are appended to the outer kind:445 wrapper event. Only a subset
+     * of tags are allowed; see [`EventTag`] for the full list.
      */
-open func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?)throws  -> String  {
+open func createMessage(mlsGroupId: String, senderPublicKey: String, content: String, kind: UInt16, tags: [[String]]?, eventTags: [[String]]?)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_create_message(
             self.uniffiCloneHandle(),
@@ -1060,7 +1211,8 @@ open func createMessage(mlsGroupId: String, senderPublicKey: String, content: St
         FfiConverterString.lower(senderPublicKey),
         FfiConverterString.lower(content),
         FfiConverterUInt16.lower(kind),
-        FfiConverterOptionSequenceSequenceString.lower(tags),$0
+        FfiConverterOptionSequenceSequenceString.lower(tags),
+        FfiConverterOptionSequenceSequenceString.lower(eventTags),$0
     )
 })
 }
@@ -1116,11 +1268,71 @@ open func decryptMediaFromDownload(mlsGroupId: String, encryptedData: Data, refe
 }
     
     /**
+     * Delete all local state for a group.
+     */
+open func deleteGroup(mlsGroupId: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_delete_group(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),$0
+    )
+}
+}
+    
+    /**
+     * Delete a key package from MLS storage using a key package Nostr event
+     *
+     * Parses the key package from the given kind-443 event and removes it
+     * from the MLS provider's storage.
+     *
+     * # Arguments
+     *
+     * * `key_package_event_json` - JSON-encoded Nostr key package event (kind 443)
+     */
+open func deleteKeyPackageFromStorage(keyPackageEventJson: String)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_delete_key_package_from_storage(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(keyPackageEventJson),$0
+    )
+}
+}
+    
+    /**
+     * Delete a key package from storage using previously serialized hash_ref bytes
+     *
+     * The `hash_ref` should be the bytes returned as the third element of
+     * `create_key_package_for_event`.
+     *
+     * # Arguments
+     *
+     * * `hash_ref` - Serialized hash reference bytes from key package creation
+     */
+open func deleteKeyPackageFromStorageByHashRef(hashRef: Data)throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_delete_key_package_from_storage_by_hash_ref(
+            self.uniffiCloneHandle(),
+        FfiConverterData.lower(hashRef),$0
+    )
+}
+}
+    
+    /**
+     * Delete all locally stored messages for a group.
+     */
+open func deleteMessagesForGroup(mlsGroupId: String)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_delete_messages_for_group(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),$0
+    )
+})
+}
+    
+    /**
      * Encrypt media for upload using default processing options
      *
      * Encrypts the supplied media file with the group's current MLS epoch key,
      * producing ciphertext ready to upload to a Blossom server. Images are
-     * automatically EXIF-sanitized and a blurhash preview is generated.
+     * automatically EXIF-sanitized and blurhash/thumbhash preview hashes are
+     * generated.
      *
      * After uploading the encrypted bytes, call `create_media_imeta_tag` with
      * the returned result and the Blossom URL to build the IMETA tag to attach
@@ -1148,8 +1360,8 @@ open func encryptMediaForUpload(mlsGroupId: String, data: Data, mimeType: String
     /**
      * Encrypt media for upload with custom processing options
      *
-     * Same as `encrypt_media_for_upload` but lets you override EXIF sanitization,
-     * blurhash generation, and size/dimension limits.
+     * Same as `encrypt_media_for_upload` but lets you override EXIF
+     * sanitization, preview hash generation, and size/dimension limits.
      *
      * # Arguments
      *
@@ -1304,6 +1516,26 @@ open func getPendingWelcomes(limit: UInt32?, offset: UInt32?)throws  -> [Welcome
 }
     
     /**
+     * Get public information about the ratchet tree of an MLS group
+     *
+     * This includes a SHA-256 fingerprint of the TLS-serialized ratchet tree,
+     * the full serialized tree as hex, and a list of leaf nodes with their
+     * indices and public keys.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func getRatchetTreeInfo(groupIdHex: String)throws  -> UniffiRatchetTreeInfo  {
+    return try  FfiConverterTypeUniffiRatchetTreeInfo_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_get_ratchet_tree_info(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
      * Get relays for a group
      */
 open func getRelays(mlsGroupId: String)throws  -> [String]  {
@@ -1323,6 +1555,50 @@ open func getWelcome(eventId: String)throws  -> Welcome?  {
     uniffi_mdk_uniffi_fn_method_mdk_get_welcome(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(eventId),$0
+    )
+})
+}
+    
+    /**
+     * Returns the current active MLS leaf positions and their bound Nostr public keys
+     *
+     * Returns a list of (leaf_index, public_key_hex) pairs. Removed-member tree
+     * holes are omitted.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func groupLeafMap(groupIdHex: String)throws  -> [LeafMapEntry]  {
+    return try  FfiConverterSequenceTypeLeafMapEntry.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_group_leaf_map(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
+     * Returns the proposal types required of every member of this group.
+     *
+     * Branch UI on this set — e.g. when `SelfRemove` is present, a
+     * non-admin member can leave the group without an admin commit.
+     * An empty vector means the group has no required proposals
+     * (the LCD outcome for mixed or empty-invitee groups); a missing
+     * group is reported as an error instead.
+     *
+     * Result order is deterministic (sorted by the underlying
+     * `BTreeSet` iteration order) so diffing across calls is stable.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func groupRequiredProposals(groupIdHex: String)throws  -> [MdkProposalType]  {
+    return try  FfiConverterSequenceTypeMdkProposalType.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_group_required_proposals(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
     )
 })
 }
@@ -1360,6 +1636,22 @@ open func mergePendingCommit(mlsGroupId: String)throws   {try rustCallWithError(
         FfiConverterString.lower(mlsGroupId),$0
     )
 }
+}
+    
+    /**
+     * Returns the local member's current MLS leaf index for a group
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func ownLeafIndex(groupIdHex: String)throws  -> UInt32  {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_own_leaf_index(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
 }
     
     /**
@@ -1401,11 +1693,85 @@ open func parseMediaImetaTag(mlsGroupId: String, imetaTag: [[String]])throws  ->
 }
     
     /**
+     * Gets the public keys of members that will be added from pending proposals
+     *
+     * Returns hex-encoded public keys of members in pending Add proposals.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func pendingAddedMembersPubkeys(groupIdHex: String)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_pending_added_members_pubkeys(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
+     * Gets all pending member changes (additions and removals) from pending proposals
+     *
+     * Returns a combined view of all pending member changes in a group.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func pendingMemberChanges(groupIdHex: String)throws  -> UniffiPendingMemberChanges  {
+    return try  FfiConverterTypeUniffiPendingMemberChanges_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_pending_member_changes(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
+     * Gets the public keys of members that will be removed from pending proposals
+     *
+     * Returns hex-encoded public keys of members in pending Remove proposals.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func pendingRemovedMembersPubkeys(groupIdHex: String)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_pending_removed_members_pubkeys(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
      * Process an incoming MLS message
      */
 open func processMessage(eventJson: String)throws  -> ProcessMessageResult  {
     return try  FfiConverterTypeProcessMessageResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_process_message(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(eventJson),$0
+    )
+})
+}
+    
+    /**
+     * Process an incoming MLS message and return the result with additional MLS context
+     *
+     * Unlike `process_message`, this method also returns transient MLS context
+     * such as the sender's leaf index, which is useful for UI display or
+     * verification purposes.
+     *
+     * # Arguments
+     *
+     * * `event_json` - JSON-encoded Nostr event containing the MLS message
+     */
+open func processMessageWithContext(eventJson: String)throws  -> ProcessMessageWithContextResult  {
+    return try  FfiConverterTypeProcessMessageWithContextResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_process_message_with_context(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(eventJson),$0
     )
@@ -1434,6 +1800,21 @@ open func removeMembers(mlsGroupId: String, memberPublicKeys: [String])throws  -
             self.uniffiCloneHandle(),
         FfiConverterString.lower(mlsGroupId),
         FfiConverterSequenceString.lower(memberPublicKeys),$0
+    )
+})
+}
+    
+    /**
+     * Self-demote from admin status before leaving a group.
+     *
+     * Per MIP-03, admins must call this before leave_group(). If the caller is
+     * the last admin, they must designate a successor via update_group_data first.
+     */
+open func selfDemote(mlsGroupId: String)throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_self_demote(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(mlsGroupId),$0
     )
 })
 }
@@ -1635,6 +2016,10 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
      */
     public var blurhash: String?
     /**
+     * Thumbhash preview string if generated, otherwise `None`
+     */
+    public var thumbhash: String?
+    /**
      * 12-byte ChaCha20-Poly1305 nonce used for encryption
      */
     public var nonce: Data
@@ -1670,6 +2055,9 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
          * Blurhash preview string if generated, otherwise `None`
          */blurhash: String?, 
         /**
+         * Thumbhash preview string if generated, otherwise `None`
+         */thumbhash: String?, 
+        /**
          * 12-byte ChaCha20-Poly1305 nonce used for encryption
          */nonce: Data) {
         self.encryptedData = encryptedData
@@ -1681,6 +2069,7 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
         self.encryptedSize = encryptedSize
         self.dimensions = dimensions
         self.blurhash = blurhash
+        self.thumbhash = thumbhash
         self.nonce = nonce
     }
 
@@ -1709,6 +2098,7 @@ public struct FfiConverterTypeEncryptedMediaUploadResult: FfiConverterRustBuffer
                 encryptedSize: FfiConverterUInt64.read(from: &buf), 
                 dimensions: FfiConverterOptionSequenceUInt32.read(from: &buf), 
                 blurhash: FfiConverterOptionString.read(from: &buf), 
+                thumbhash: FfiConverterOptionString.read(from: &buf), 
                 nonce: FfiConverterData.read(from: &buf)
         )
     }
@@ -1723,6 +2113,7 @@ public struct FfiConverterTypeEncryptedMediaUploadResult: FfiConverterRustBuffer
         FfiConverterUInt64.write(value.encryptedSize, into: &buf)
         FfiConverterOptionSequenceUInt32.write(value.dimensions, into: &buf)
         FfiConverterOptionString.write(value.blurhash, into: &buf)
+        FfiConverterOptionString.write(value.thumbhash, into: &buf)
         FfiConverterData.write(value.nonce, into: &buf)
     }
 }
@@ -2107,6 +2498,10 @@ public struct GroupImageUpload: Equatable, Hashable {
      * Blurhash for preview if generated
      */
     public var blurhash: String?
+    /**
+     * Thumbhash for preview if generated
+     */
+    public var thumbhash: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -2140,7 +2535,10 @@ public struct GroupImageUpload: Equatable, Hashable {
          */dimensions: ImageDimensions?, 
         /**
          * Blurhash for preview if generated
-         */blurhash: String?) {
+         */blurhash: String?, 
+        /**
+         * Thumbhash for preview if generated
+         */thumbhash: String?) {
         self.encryptedData = encryptedData
         self.encryptedHash = encryptedHash
         self.imageKey = imageKey
@@ -2151,6 +2549,7 @@ public struct GroupImageUpload: Equatable, Hashable {
         self.mimeType = mimeType
         self.dimensions = dimensions
         self.blurhash = blurhash
+        self.thumbhash = thumbhash
     }
 
     
@@ -2178,7 +2577,8 @@ public struct FfiConverterTypeGroupImageUpload: FfiConverterRustBuffer {
                 encryptedSize: FfiConverterUInt64.read(from: &buf), 
                 mimeType: FfiConverterString.read(from: &buf), 
                 dimensions: FfiConverterOptionTypeImageDimensions.read(from: &buf), 
-                blurhash: FfiConverterOptionString.read(from: &buf)
+                blurhash: FfiConverterOptionString.read(from: &buf), 
+                thumbhash: FfiConverterOptionString.read(from: &buf)
         )
     }
 
@@ -2193,6 +2593,7 @@ public struct FfiConverterTypeGroupImageUpload: FfiConverterRustBuffer {
         FfiConverterString.write(value.mimeType, into: &buf)
         FfiConverterOptionTypeImageDimensions.write(value.dimensions, into: &buf)
         FfiConverterOptionString.write(value.blurhash, into: &buf)
+        FfiConverterOptionString.write(value.thumbhash, into: &buf)
     }
 }
 
@@ -2286,33 +2687,55 @@ public func FfiConverterTypeImageDimensions_lower(_ value: ImageDimensions) -> R
  */
 public struct KeyPackageResult: Equatable, Hashable {
     /**
-     * Hex-encoded key package
+     * Base64-encoded key package content
      */
     public var keyPackage: String
     /**
-     * JSON-encoded tags for the key package event
+     * Tags for the kind:30443 key package event in UniFFI wire format (includes the `d` tag)
      */
     public var tags: [[String]]
+    /**
+     * Tags for the legacy kind:443 event (omits the `d` tag)
+     */
+    public var tagsLegacy: [[String]]
     /**
      * Serialized hash_ref bytes for the key package (for lifecycle tracking)
      */
     public var hashRef: Data
+    /**
+     * The `d` tag value (32-byte hex string) for this KeyPackage slot.
+     * Callers SHOULD store this and, when rotating, replace the generated
+     * `["d", ...]` entry in `tags` with the stored value before signing.
+     * Reusing the same `(kind, pubkey, d)` tuple lets relays replace the old event.
+     */
+    public var dTag: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(
         /**
-         * Hex-encoded key package
+         * Base64-encoded key package content
          */keyPackage: String, 
         /**
-         * JSON-encoded tags for the key package event
+         * Tags for the kind:30443 key package event in UniFFI wire format (includes the `d` tag)
          */tags: [[String]], 
         /**
+         * Tags for the legacy kind:443 event (omits the `d` tag)
+         */tagsLegacy: [[String]], 
+        /**
          * Serialized hash_ref bytes for the key package (for lifecycle tracking)
-         */hashRef: Data) {
+         */hashRef: Data, 
+        /**
+         * The `d` tag value (32-byte hex string) for this KeyPackage slot.
+         * Callers SHOULD store this and, when rotating, replace the generated
+         * `["d", ...]` entry in `tags` with the stored value before signing.
+         * Reusing the same `(kind, pubkey, d)` tuple lets relays replace the old event.
+         */dTag: String) {
         self.keyPackage = keyPackage
         self.tags = tags
+        self.tagsLegacy = tagsLegacy
         self.hashRef = hashRef
+        self.dTag = dTag
     }
 
     
@@ -2333,14 +2756,18 @@ public struct FfiConverterTypeKeyPackageResult: FfiConverterRustBuffer {
             try KeyPackageResult(
                 keyPackage: FfiConverterString.read(from: &buf), 
                 tags: FfiConverterSequenceSequenceString.read(from: &buf), 
-                hashRef: FfiConverterData.read(from: &buf)
+                tagsLegacy: FfiConverterSequenceSequenceString.read(from: &buf), 
+                hashRef: FfiConverterData.read(from: &buf), 
+                dTag: FfiConverterString.read(from: &buf)
         )
     }
 
     public static func write(_ value: KeyPackageResult, into buf: inout [UInt8]) {
         FfiConverterString.write(value.keyPackage, into: &buf)
         FfiConverterSequenceSequenceString.write(value.tags, into: &buf)
+        FfiConverterSequenceSequenceString.write(value.tagsLegacy, into: &buf)
         FfiConverterData.write(value.hashRef, into: &buf)
+        FfiConverterString.write(value.dTag, into: &buf)
     }
 }
 
@@ -2357,6 +2784,75 @@ public func FfiConverterTypeKeyPackageResult_lift(_ buf: RustBuffer) throws -> K
 #endif
 public func FfiConverterTypeKeyPackageResult_lower(_ value: KeyPackageResult) -> RustBuffer {
     return FfiConverterTypeKeyPackageResult.lower(value)
+}
+
+
+/**
+ * An entry in the group leaf map
+ */
+public struct LeafMapEntry: Equatable, Hashable {
+    /**
+     * The leaf index in the ratchet tree
+     */
+    public var leafIndex: UInt32
+    /**
+     * Hex-encoded Nostr public key bound to this leaf
+     */
+    public var publicKey: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The leaf index in the ratchet tree
+         */leafIndex: UInt32, 
+        /**
+         * Hex-encoded Nostr public key bound to this leaf
+         */publicKey: String) {
+        self.leafIndex = leafIndex
+        self.publicKey = publicKey
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LeafMapEntry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLeafMapEntry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LeafMapEntry {
+        return
+            try LeafMapEntry(
+                leafIndex: FfiConverterUInt32.read(from: &buf), 
+                publicKey: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LeafMapEntry, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.leafIndex, into: &buf)
+        FfiConverterString.write(value.publicKey, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLeafMapEntry_lift(_ buf: RustBuffer) throws -> LeafMapEntry {
+    return try FfiConverterTypeLeafMapEntry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLeafMapEntry_lower(_ value: LeafMapEntry) -> RustBuffer {
+    return FfiConverterTypeLeafMapEntry.lower(value)
 }
 
 
@@ -2510,8 +3006,9 @@ public func FfiConverterTypeMdkConfig_lower(_ value: MdkConfig) -> RustBuffer {
  *
  * `max_dimension`, `max_file_size`, and `max_filename_length` are optional and
  * fall back to sensible, privacy-first defaults when `None`.
- * `sanitize_exif` and `generate_blurhash` are explicit toggles; pass `None` to
- * accept the privacy-first defaults (`true` for both).
+ * `sanitize_exif`, `generate_blurhash`, and `generate_thumbhash` are explicit
+ * toggles; pass `None` to accept the privacy-first defaults (`true` for all
+ * preview hashes).
  * To use all defaults without constructing this struct, call
  * `encrypt_media_for_upload`.
  */
@@ -2524,6 +3021,10 @@ public struct MediaProcessingOptionsInput: Equatable, Hashable {
      * Generate a blurhash preview string for images (default: `true`)
      */
     public var generateBlurhash: Bool?
+    /**
+     * Generate a thumbhash preview string for images (default: `true`)
+     */
+    public var generateThumbhash: Bool?
     /**
      * Maximum allowed image dimension in pixels (default: 16384)
      */
@@ -2547,6 +3048,9 @@ public struct MediaProcessingOptionsInput: Equatable, Hashable {
          * Generate a blurhash preview string for images (default: `true`)
          */generateBlurhash: Bool?, 
         /**
+         * Generate a thumbhash preview string for images (default: `true`)
+         */generateThumbhash: Bool?, 
+        /**
          * Maximum allowed image dimension in pixels (default: 16384)
          */maxDimension: UInt32?, 
         /**
@@ -2557,6 +3061,7 @@ public struct MediaProcessingOptionsInput: Equatable, Hashable {
          */maxFilenameLength: UInt64?) {
         self.sanitizeExif = sanitizeExif
         self.generateBlurhash = generateBlurhash
+        self.generateThumbhash = generateThumbhash
         self.maxDimension = maxDimension
         self.maxFileSize = maxFileSize
         self.maxFilenameLength = maxFilenameLength
@@ -2580,6 +3085,7 @@ public struct FfiConverterTypeMediaProcessingOptionsInput: FfiConverterRustBuffe
             try MediaProcessingOptionsInput(
                 sanitizeExif: FfiConverterOptionBool.read(from: &buf), 
                 generateBlurhash: FfiConverterOptionBool.read(from: &buf), 
+                generateThumbhash: FfiConverterOptionBool.read(from: &buf), 
                 maxDimension: FfiConverterOptionUInt32.read(from: &buf), 
                 maxFileSize: FfiConverterOptionUInt64.read(from: &buf), 
                 maxFilenameLength: FfiConverterOptionUInt64.read(from: &buf)
@@ -2589,6 +3095,7 @@ public struct FfiConverterTypeMediaProcessingOptionsInput: FfiConverterRustBuffe
     public static func write(_ value: MediaProcessingOptionsInput, into buf: inout [UInt8]) {
         FfiConverterOptionBool.write(value.sanitizeExif, into: &buf)
         FfiConverterOptionBool.write(value.generateBlurhash, into: &buf)
+        FfiConverterOptionBool.write(value.generateThumbhash, into: &buf)
         FfiConverterOptionUInt32.write(value.maxDimension, into: &buf)
         FfiConverterOptionUInt64.write(value.maxFileSize, into: &buf)
         FfiConverterOptionUInt64.write(value.maxFilenameLength, into: &buf)
@@ -2891,6 +3398,312 @@ public func FfiConverterTypeMessage_lower(_ value: Message) -> RustBuffer {
 
 
 /**
+ * Result of processing a message with additional MLS context
+ */
+public struct ProcessMessageWithContextResult: Equatable, Hashable {
+    /**
+     * The primary processing result
+     */
+    public var result: ProcessMessageResult
+    /**
+     * The MLS sender leaf index, if the sender is a group member
+     */
+    public var senderLeafIndex: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The primary processing result
+         */result: ProcessMessageResult, 
+        /**
+         * The MLS sender leaf index, if the sender is a group member
+         */senderLeafIndex: UInt32?) {
+        self.result = result
+        self.senderLeafIndex = senderLeafIndex
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension ProcessMessageWithContextResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeProcessMessageWithContextResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ProcessMessageWithContextResult {
+        return
+            try ProcessMessageWithContextResult(
+                result: FfiConverterTypeProcessMessageResult.read(from: &buf), 
+                senderLeafIndex: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ProcessMessageWithContextResult, into buf: inout [UInt8]) {
+        FfiConverterTypeProcessMessageResult.write(value.result, into: &buf)
+        FfiConverterOptionUInt32.write(value.senderLeafIndex, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProcessMessageWithContextResult_lift(_ buf: RustBuffer) throws -> ProcessMessageWithContextResult {
+    return try FfiConverterTypeProcessMessageWithContextResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeProcessMessageWithContextResult_lower(_ value: ProcessMessageWithContextResult) -> RustBuffer {
+    return FfiConverterTypeProcessMessageWithContextResult.lower(value)
+}
+
+
+/**
+ * Public information about a leaf node in the ratchet tree
+ */
+public struct UniffiLeafNodeInfo: Equatable, Hashable {
+    /**
+     * The leaf index in the ratchet tree
+     */
+    public var index: UInt32
+    /**
+     * The member's public HPKE encryption key (hex-encoded)
+     */
+    public var encryptionKey: String
+    /**
+     * The member's public signature key (hex-encoded)
+     */
+    public var signatureKey: String
+    /**
+     * The member's credential identity (hex-encoded, typically a Nostr public key)
+     */
+    public var credentialIdentity: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The leaf index in the ratchet tree
+         */index: UInt32, 
+        /**
+         * The member's public HPKE encryption key (hex-encoded)
+         */encryptionKey: String, 
+        /**
+         * The member's public signature key (hex-encoded)
+         */signatureKey: String, 
+        /**
+         * The member's credential identity (hex-encoded, typically a Nostr public key)
+         */credentialIdentity: String) {
+        self.index = index
+        self.encryptionKey = encryptionKey
+        self.signatureKey = signatureKey
+        self.credentialIdentity = credentialIdentity
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UniffiLeafNodeInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUniffiLeafNodeInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UniffiLeafNodeInfo {
+        return
+            try UniffiLeafNodeInfo(
+                index: FfiConverterUInt32.read(from: &buf), 
+                encryptionKey: FfiConverterString.read(from: &buf), 
+                signatureKey: FfiConverterString.read(from: &buf), 
+                credentialIdentity: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UniffiLeafNodeInfo, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.index, into: &buf)
+        FfiConverterString.write(value.encryptionKey, into: &buf)
+        FfiConverterString.write(value.signatureKey, into: &buf)
+        FfiConverterString.write(value.credentialIdentity, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiLeafNodeInfo_lift(_ buf: RustBuffer) throws -> UniffiLeafNodeInfo {
+    return try FfiConverterTypeUniffiLeafNodeInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiLeafNodeInfo_lower(_ value: UniffiLeafNodeInfo) -> RustBuffer {
+    return FfiConverterTypeUniffiLeafNodeInfo.lower(value)
+}
+
+
+/**
+ * Pending member changes from proposals that need admin approval
+ */
+public struct UniffiPendingMemberChanges: Equatable, Hashable {
+    /**
+     * Hex-encoded public keys of members that will be added when proposals are committed
+     */
+    public var additions: [String]
+    /**
+     * Hex-encoded public keys of members that will be removed when proposals are committed
+     */
+    public var removals: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Hex-encoded public keys of members that will be added when proposals are committed
+         */additions: [String], 
+        /**
+         * Hex-encoded public keys of members that will be removed when proposals are committed
+         */removals: [String]) {
+        self.additions = additions
+        self.removals = removals
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UniffiPendingMemberChanges: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUniffiPendingMemberChanges: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UniffiPendingMemberChanges {
+        return
+            try UniffiPendingMemberChanges(
+                additions: FfiConverterSequenceString.read(from: &buf), 
+                removals: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UniffiPendingMemberChanges, into buf: inout [UInt8]) {
+        FfiConverterSequenceString.write(value.additions, into: &buf)
+        FfiConverterSequenceString.write(value.removals, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiPendingMemberChanges_lift(_ buf: RustBuffer) throws -> UniffiPendingMemberChanges {
+    return try FfiConverterTypeUniffiPendingMemberChanges.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiPendingMemberChanges_lower(_ value: UniffiPendingMemberChanges) -> RustBuffer {
+    return FfiConverterTypeUniffiPendingMemberChanges.lower(value)
+}
+
+
+/**
+ * Public information about the ratchet tree of an MLS group
+ */
+public struct UniffiRatchetTreeInfo: Equatable, Hashable {
+    /**
+     * SHA-256 fingerprint of the TLS-serialized ratchet tree (hex-encoded)
+     */
+    public var treeHash: String
+    /**
+     * The full ratchet tree serialized via TLS encoding (hex-encoded)
+     */
+    public var serializedTree: String
+    /**
+     * Leaf nodes with their indices and public keys
+     */
+    public var leafNodes: [UniffiLeafNodeInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * SHA-256 fingerprint of the TLS-serialized ratchet tree (hex-encoded)
+         */treeHash: String, 
+        /**
+         * The full ratchet tree serialized via TLS encoding (hex-encoded)
+         */serializedTree: String, 
+        /**
+         * Leaf nodes with their indices and public keys
+         */leafNodes: [UniffiLeafNodeInfo]) {
+        self.treeHash = treeHash
+        self.serializedTree = serializedTree
+        self.leafNodes = leafNodes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UniffiRatchetTreeInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUniffiRatchetTreeInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UniffiRatchetTreeInfo {
+        return
+            try UniffiRatchetTreeInfo(
+                treeHash: FfiConverterString.read(from: &buf), 
+                serializedTree: FfiConverterString.read(from: &buf), 
+                leafNodes: FfiConverterSequenceTypeUniffiLeafNodeInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UniffiRatchetTreeInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.treeHash, into: &buf)
+        FfiConverterString.write(value.serializedTree, into: &buf)
+        FfiConverterSequenceTypeUniffiLeafNodeInfo.write(value.leafNodes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiRatchetTreeInfo_lift(_ buf: RustBuffer) throws -> UniffiRatchetTreeInfo {
+    return try FfiConverterTypeUniffiRatchetTreeInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUniffiRatchetTreeInfo_lower(_ value: UniffiRatchetTreeInfo) -> RustBuffer {
+    return FfiConverterTypeUniffiRatchetTreeInfo.lower(value)
+}
+
+
+/**
  * Result of updating a group
  */
 public struct UpdateGroupResult: Equatable, Hashable {
@@ -3166,6 +3979,91 @@ public func FfiConverterTypeWelcome_lift(_ buf: RustBuffer) throws -> Welcome {
 public func FfiConverterTypeWelcome_lower(_ value: Welcome) -> RustBuffer {
     return FfiConverterTypeWelcome.lower(value)
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Uniffi-friendly mirror of `openmls::prelude::ProposalType`.
+ *
+ * Exists because uniffi cannot express a foreign-crate enum directly.
+ * Kept minimal: mobile consumers today only branch on whether
+ * `SelfRemove` is present; anything else collapses to `Unknown`.
+ * If that changes — e.g. a future MIP makes another proposal type
+ * observable to UIs — add a variant here and a matching arm in the
+ * `From` impl below.
+ */
+
+public enum MdkProposalType: Equatable, Hashable {
+    
+    /**
+     * Member-initiated voluntary departure (MLS Extensions draft,
+     * `0x000a`). When a group's required-capabilities set contains
+     * `SelfRemove`, non-admin members can leave without an admin commit.
+     */
+    case selfRemove
+    /**
+     * Any proposal type the mobile API does not distinguish today.
+     */
+    case unknown
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension MdkProposalType: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkProposalType: FfiConverterRustBuffer {
+    typealias SwiftType = MdkProposalType
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkProposalType {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .selfRemove
+        
+        case 2: return .unknown
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdkProposalType, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .selfRemove:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .unknown:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalType_lift(_ buf: RustBuffer) throws -> MdkProposalType {
+    return try FfiConverterTypeMdkProposalType.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalType_lower(_ value: MdkProposalType) -> RustBuffer {
+    return FfiConverterTypeMdkProposalType.lower(value)
+}
+
 
 
 /**
@@ -3873,6 +4771,31 @@ fileprivate struct FfiConverterSequenceTypeGroup: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeLeafMapEntry: FfiConverterRustBuffer {
+    typealias SwiftType = [LeafMapEntry]
+
+    public static func write(_ value: [LeafMapEntry], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeLeafMapEntry.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [LeafMapEntry] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [LeafMapEntry]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeLeafMapEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeMessage: FfiConverterRustBuffer {
     typealias SwiftType = [Message]
 
@@ -3898,6 +4821,31 @@ fileprivate struct FfiConverterSequenceTypeMessage: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeUniffiLeafNodeInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UniffiLeafNodeInfo]
+
+    public static func write(_ value: [UniffiLeafNodeInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUniffiLeafNodeInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UniffiLeafNodeInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UniffiLeafNodeInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUniffiLeafNodeInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeWelcome: FfiConverterRustBuffer {
     typealias SwiftType = [Welcome]
 
@@ -3915,6 +4863,31 @@ fileprivate struct FfiConverterSequenceTypeWelcome: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeWelcome.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMdkProposalType: FfiConverterRustBuffer {
+    typealias SwiftType = [MdkProposalType]
+
+    public static func write(_ value: [MdkProposalType], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMdkProposalType.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MdkProposalType] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MdkProposalType]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMdkProposalType.read(from: &buf))
         }
         return seq
     }
@@ -3969,21 +4942,30 @@ public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> Strin
 })
 }
 /**
+ * Explicitly initialize the platform keyring store.
+ *
+ * Most consumers do not need this — [`new_mdk`] calls it automatically.
+ * Use this if you need the keyring store initialized before constructing
+ * an MDK instance (e.g. for direct `keyring_core::Entry` access).
+ *
+ * Safe to call multiple times; successful initialization is cached.
+ * If the host application has already called `keyring_core::set_default_store()`
+ * before this function, this is a no-op — the caller's store is preserved.
+ */
+public func initKeyringStore()throws   {try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_init_keyring_store($0
+    )
+}
+}
+/**
  * Create a new MDK instance with encrypted SQLite storage using automatic key management.
  *
  * This is the recommended constructor for production use. The database encryption key
  * is automatically retrieved from (or generated and stored in) the platform's native
  * keyring (Keychain on macOS/iOS, Keystore on Android, etc.).
  *
- * # Prerequisites
- *
- * The host application must initialize a platform-specific keyring store before calling
- * this function:
- *
- * - **macOS/iOS**: `keyring_core::set_default_store(AppleStore::new())`
- * - **Android**: Initialize from Kotlin (see Android documentation)
- * - **Windows**: `keyring_core::set_default_store(WindowsStore::new())`
- * - **Linux**: `keyring_core::set_default_store(KeyutilsStore::new())`
+ * The platform keyring store is initialized automatically on the first call.
+ * Callers no longer need to call `keyring_core::set_default_store()` manually.
  *
  * # Arguments
  *
@@ -3995,7 +4977,7 @@ public func deriveUploadKeypair(imageKey: Data, version: UInt16)throws  -> Strin
  * # Errors
  *
  * Returns an error if:
- * - No keyring store has been initialized
+ * - The platform keyring store cannot be initialized
  * - The keyring is unavailable or inaccessible
  * - The database cannot be opened or created
  */
@@ -4005,28 +4987,6 @@ public func newMdk(dbPath: String, serviceId: String, dbKeyId: String, config: M
         FfiConverterString.lower(dbPath),
         FfiConverterString.lower(serviceId),
         FfiConverterString.lower(dbKeyId),
-        FfiConverterOptionTypeMdkConfig.lower(config),$0
-    )
-})
-}
-/**
- * Create a new MDK instance with unencrypted SQLite storage.
- *
- * ⚠️ **WARNING**: This creates an unencrypted database. Sensitive MLS state
- * including exporter secrets will be stored in plaintext.
- *
- * Only use this for development or testing. For production use, use `new_mdk`
- * with an encryption key.
- *
- * # Arguments
- *
- * * `db_path` - Path to the SQLite database file
- * * `config` - Optional MDK configuration. If None, uses default configuration.
- */
-public func newMdkUnencrypted(dbPath: String, config: MdkConfig?)throws  -> Mdk  {
-    return try  FfiConverterTypeMdk_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
-    uniffi_mdk_uniffi_fn_func_new_mdk_unencrypted(
-        FfiConverterString.lower(dbPath),
         FfiConverterOptionTypeMdkConfig.lower(config),$0
     )
 })
@@ -4068,6 +5028,22 @@ public func prepareGroupImageForUpload(imageData: Data, mimeType: String)throws 
     )
 })
 }
+/**
+ * Prepare group image for upload with custom processing options
+ *
+ * Like `prepare_group_image_for_upload`, but allows customizing validation
+ * and processing behavior such as EXIF stripping, blurhash generation,
+ * and size limits.
+ */
+public func prepareGroupImageForUploadWithOptions(imageData: Data, mimeType: String, options: MediaProcessingOptionsInput)throws  -> GroupImageUpload  {
+    return try  FfiConverterTypeGroupImageUpload_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_func_prepare_group_image_for_upload_with_options(
+        FfiConverterData.lower(imageData),
+        FfiConverterString.lower(mimeType),
+        FfiConverterTypeMediaProcessingOptionsInput_lower(options),$0
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -4090,16 +5066,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_func_derive_upload_keypair() != 45595) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 40772) {
+    if (uniffi_mdk_uniffi_checksum_func_init_keyring_store() != 38301) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_func_new_mdk_unencrypted() != 29834) {
+    if (uniffi_mdk_uniffi_checksum_func_new_mdk() != 44062) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_new_mdk_with_key() != 29974) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload() != 65092) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_func_prepare_group_image_for_upload_with_options() != 40601) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_accept_welcome() != 3695) {
@@ -4126,7 +5105,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_media_imeta_tag() != 4917) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 58601) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_message() != 39471) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_decline_welcome() != 57917) {
@@ -4138,10 +5117,22 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_decrypt_media_from_download() != 48593) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload() != 41485) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_delete_group() != 342) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload_with_options() != 55124) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_delete_key_package_from_storage() != 20843) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_delete_key_package_from_storage_by_hash_ref() != 10415) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_delete_messages_for_group() != 26935) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload() != 37329) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_encrypt_media_for_upload_with_options() != 6450) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_group() != 1495) {
@@ -4165,10 +5156,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_pending_welcomes() != 31211) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_get_ratchet_tree_info() != 6330) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_relays() != 55523) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_welcome() != 25012) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_group_leaf_map() != 58304) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_group_required_proposals() != 24118) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_groups_needing_self_update() != 16699) {
@@ -4180,19 +5180,37 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_merge_pending_commit() != 22201) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_own_leaf_index() != 8924) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_parse_key_package() != 41870) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_parse_media_imeta_tag() != 60768) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_pending_added_members_pubkeys() != 10922) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_pending_member_changes() != 41921) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_pending_removed_members_pubkeys() != 34652) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_process_message() != 15589) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_process_message_with_context() != 28259) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_process_welcome() != 34932) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_remove_members() != 31926) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_self_demote() != 56879) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_self_update() != 48999) {
