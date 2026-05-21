@@ -606,12 +606,10 @@ public protocol MdkProtocol: AnyObject, Sendable {
      *
      * * `public_key` - The Nostr public key (hex) for the credential
      * * `relays` - Relay URLs where the key package will be published
-     * * `protected` - Whether to add the NIP-70 protected tag. When `true`, relays that
-     * implement NIP-70 will reject republishing by third parties. However, many popular
-     * relays reject protected events entirely. Set to `false` for maximum relay
-     * compatibility.
+     * * `options` - Event-construction options ([`KeyPackageOptions`]). Use the default
+     * value for "no protected tag, freshly generated `d` tag" behavior.
      */
-    func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], protected: Bool) throws  -> KeyPackageResult
+    func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], options: KeyPackageOptions) throws  -> KeyPackageResult
     
     /**
      * Build an IMETA tag for an encrypted media upload
@@ -840,6 +838,18 @@ public protocol MdkProtocol: AnyObject, Sendable {
     func getWelcome(eventId: String) throws  -> Welcome?
     
     /**
+     * Returns per-proposal capability upgrade readiness for a group.
+     *
+     * Any member may call this. Each entry reports whether the mirrored proposal type is already
+     * required, currently available for upgrade, or blocked by one or more members.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func groupCapabilityUpgradeStatus(groupIdHex: String) throws  -> MdkCapabilityUpgradeStatus
+    
+    /**
      * Returns the current active MLS leaf positions and their bound Nostr public keys
      *
      * Returns a list of (leaf_index, public_key_hex) pairs. Removed-member tree
@@ -850,6 +860,17 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * * `group_id_hex` - Hex-encoded MLS group ID
      */
     func groupLeafMap(groupIdHex: String) throws  -> [LeafMapEntry]
+    
+    /**
+     * Returns per-member advertised MLS capabilities for every active group leaf.
+     *
+     * Any member may call this. The returned vector is ordered by MLS leaf index.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+    func groupMemberCapabilities(groupIdHex: String) throws  -> [MdkMemberCapabilities]
     
     /**
      * Returns the proposal types required of every member of this group.
@@ -999,6 +1020,19 @@ public protocol MdkProtocol: AnyObject, Sendable {
      * Update group data (name, description, image, relays, admins)
      */
     func updateGroupData(mlsGroupId: String, update: GroupDataUpdate) throws  -> UpdateGroupResult
+    
+    /**
+     * Proposes a group capability upgrade by adding proposal types to `RequiredCapabilities`.
+     *
+     * Admin-only. Pass the proposal types reported as `Available` by
+     * [`Mdk::group_capability_upgrade_status`].
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     * * `proposals_to_add` - Proposal types to add to the group's required capabilities
+     */
+    func upgradeGroupCapabilities(groupIdHex: String, proposalsToAdd: [MdkProposalType]) throws  -> UpdateGroupResult
     
 }
 /**
@@ -1154,18 +1188,16 @@ open func createKeyPackageForEvent(publicKey: String, relays: [String])throws  -
      *
      * * `public_key` - The Nostr public key (hex) for the credential
      * * `relays` - Relay URLs where the key package will be published
-     * * `protected` - Whether to add the NIP-70 protected tag. When `true`, relays that
-     * implement NIP-70 will reject republishing by third parties. However, many popular
-     * relays reject protected events entirely. Set to `false` for maximum relay
-     * compatibility.
+     * * `options` - Event-construction options ([`KeyPackageOptions`]). Use the default
+     * value for "no protected tag, freshly generated `d` tag" behavior.
      */
-open func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], protected: Bool)throws  -> KeyPackageResult  {
+open func createKeyPackageForEventWithOptions(publicKey: String, relays: [String], options: KeyPackageOptions)throws  -> KeyPackageResult  {
     return try  FfiConverterTypeKeyPackageResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(publicKey),
         FfiConverterSequenceString.lower(relays),
-        FfiConverterBool.lower(protected),$0
+        FfiConverterTypeKeyPackageOptions_lower(options),$0
     )
 })
 }
@@ -1560,6 +1592,25 @@ open func getWelcome(eventId: String)throws  -> Welcome?  {
 }
     
     /**
+     * Returns per-proposal capability upgrade readiness for a group.
+     *
+     * Any member may call this. Each entry reports whether the mirrored proposal type is already
+     * required, currently available for upgrade, or blocked by one or more members.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func groupCapabilityUpgradeStatus(groupIdHex: String)throws  -> MdkCapabilityUpgradeStatus  {
+    return try  FfiConverterTypeMdkCapabilityUpgradeStatus_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_group_capability_upgrade_status(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
      * Returns the current active MLS leaf positions and their bound Nostr public keys
      *
      * Returns a list of (leaf_index, public_key_hex) pairs. Removed-member tree
@@ -1572,6 +1623,24 @@ open func getWelcome(eventId: String)throws  -> Welcome?  {
 open func groupLeafMap(groupIdHex: String)throws  -> [LeafMapEntry]  {
     return try  FfiConverterSequenceTypeLeafMapEntry.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_group_leaf_map(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),$0
+    )
+})
+}
+    
+    /**
+     * Returns per-member advertised MLS capabilities for every active group leaf.
+     *
+     * Any member may call this. The returned vector is ordered by MLS leaf index.
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     */
+open func groupMemberCapabilities(groupIdHex: String)throws  -> [MdkMemberCapabilities]  {
+    return try  FfiConverterSequenceTypeMdkMemberCapabilities.lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_group_member_capabilities(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(groupIdHex),$0
     )
@@ -1855,6 +1924,27 @@ open func updateGroupData(mlsGroupId: String, update: GroupDataUpdate)throws  ->
 })
 }
     
+    /**
+     * Proposes a group capability upgrade by adding proposal types to `RequiredCapabilities`.
+     *
+     * Admin-only. Pass the proposal types reported as `Available` by
+     * [`Mdk::group_capability_upgrade_status`].
+     *
+     * # Arguments
+     *
+     * * `group_id_hex` - Hex-encoded MLS group ID
+     * * `proposals_to_add` - Proposal types to add to the group's required capabilities
+     */
+open func upgradeGroupCapabilities(groupIdHex: String, proposalsToAdd: [MdkProposalType])throws  -> UpdateGroupResult  {
+    return try  FfiConverterTypeUpdateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
+    uniffi_mdk_uniffi_fn_method_mdk_upgrade_group_capabilities(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(groupIdHex),
+        FfiConverterSequenceTypeMdkProposalType.lower(proposalsToAdd),$0
+    )
+})
+}
+    
 
     
 }
@@ -2020,6 +2110,14 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
      */
     public var thumbhash: String?
     /**
+     * Optional audio duration in milliseconds for display purposes
+     */
+    public var durationMs: UInt64?
+    /**
+     * Optional audio waveform samples in the inclusive range 0..=100
+     */
+    public var waveform: Data?
+    /**
      * 12-byte ChaCha20-Poly1305 nonce used for encryption
      */
     public var nonce: Data
@@ -2058,6 +2156,12 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
          * Thumbhash preview string if generated, otherwise `None`
          */thumbhash: String?, 
         /**
+         * Optional audio duration in milliseconds for display purposes
+         */durationMs: UInt64?, 
+        /**
+         * Optional audio waveform samples in the inclusive range 0..=100
+         */waveform: Data?, 
+        /**
          * 12-byte ChaCha20-Poly1305 nonce used for encryption
          */nonce: Data) {
         self.encryptedData = encryptedData
@@ -2070,6 +2174,8 @@ public struct EncryptedMediaUploadResult: Equatable, Hashable {
         self.dimensions = dimensions
         self.blurhash = blurhash
         self.thumbhash = thumbhash
+        self.durationMs = durationMs
+        self.waveform = waveform
         self.nonce = nonce
     }
 
@@ -2099,6 +2205,8 @@ public struct FfiConverterTypeEncryptedMediaUploadResult: FfiConverterRustBuffer
                 dimensions: FfiConverterOptionSequenceUInt32.read(from: &buf), 
                 blurhash: FfiConverterOptionString.read(from: &buf), 
                 thumbhash: FfiConverterOptionString.read(from: &buf), 
+                durationMs: FfiConverterOptionUInt64.read(from: &buf), 
+                waveform: FfiConverterOptionData.read(from: &buf), 
                 nonce: FfiConverterData.read(from: &buf)
         )
     }
@@ -2114,6 +2222,8 @@ public struct FfiConverterTypeEncryptedMediaUploadResult: FfiConverterRustBuffer
         FfiConverterOptionSequenceUInt32.write(value.dimensions, into: &buf)
         FfiConverterOptionString.write(value.blurhash, into: &buf)
         FfiConverterOptionString.write(value.thumbhash, into: &buf)
+        FfiConverterOptionUInt64.write(value.durationMs, into: &buf)
+        FfiConverterOptionData.write(value.waveform, into: &buf)
         FfiConverterData.write(value.nonce, into: &buf)
     }
 }
@@ -2683,6 +2793,112 @@ public func FfiConverterTypeImageDimensions_lower(_ value: ImageDimensions) -> R
 
 
 /**
+ * Options for creating a key package event.
+ *
+ * Mirrors `mdk_core::key_packages::KeyPackageOptions`. Both fields carry FFI-level
+ * defaults via `#[uniffi(default = ...)]`, so foreign callers (Kotlin / Swift /
+ * Python) can omit either or both for the standard behavior — e.g. in Kotlin,
+ * `KeyPackageOptions()` is equivalent to
+ * `KeyPackageOptions(protected = false, existingDTag = null)`. Or skip options
+ * entirely by calling `create_key_package_for_event` instead.
+ */
+public struct KeyPackageOptions: Equatable, Hashable {
+    /**
+     * Add the NIP-70 protected tag (`["-"]`).
+     *
+     * When `true`, relays that implement NIP-70 will reject republishing of this
+     * event by third parties. Many popular relays (Damus, Primal, nos.lol) reject
+     * protected events entirely — only enable when publishing to relays known to
+     * accept NIP-70 protected events. Defaults to `false` for max relay compat.
+     */
+    public var protected: Bool
+    /**
+     * Reuse an existing `d` tag value instead of generating a new one.
+     *
+     * Pass a previously stored `d_tag` here to rotate a KeyPackage while keeping
+     * the NIP-33 addressable slot stable — relays replace the previous event under
+     * the same `(kind, pubkey, d)` coordinate.
+     *
+     * Must be exactly 64 ASCII hex digits (per MIP-00). Validation runs at the FFI
+     * boundary; malformed input surfaces as `MdkUniffiError::InvalidInput` before
+     * crossing into `mdk_core`, matching how `parse_public_key` / `parse_relay_urls`
+     * report parameter errors. When `None` (the default), a fresh random 32-byte
+     * hex value is generated.
+     */
+    public var existingDTag: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Add the NIP-70 protected tag (`["-"]`).
+         *
+         * When `true`, relays that implement NIP-70 will reject republishing of this
+         * event by third parties. Many popular relays (Damus, Primal, nos.lol) reject
+         * protected events entirely — only enable when publishing to relays known to
+         * accept NIP-70 protected events. Defaults to `false` for max relay compat.
+         */protected: Bool = false, 
+        /**
+         * Reuse an existing `d` tag value instead of generating a new one.
+         *
+         * Pass a previously stored `d_tag` here to rotate a KeyPackage while keeping
+         * the NIP-33 addressable slot stable — relays replace the previous event under
+         * the same `(kind, pubkey, d)` coordinate.
+         *
+         * Must be exactly 64 ASCII hex digits (per MIP-00). Validation runs at the FFI
+         * boundary; malformed input surfaces as `MdkUniffiError::InvalidInput` before
+         * crossing into `mdk_core`, matching how `parse_public_key` / `parse_relay_urls`
+         * report parameter errors. When `None` (the default), a fresh random 32-byte
+         * hex value is generated.
+         */existingDTag: String? = nil) {
+        self.protected = protected
+        self.existingDTag = existingDTag
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension KeyPackageOptions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKeyPackageOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyPackageOptions {
+        return
+            try KeyPackageOptions(
+                protected: FfiConverterBool.read(from: &buf), 
+                existingDTag: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: KeyPackageOptions, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.protected, into: &buf)
+        FfiConverterOptionString.write(value.existingDTag, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyPackageOptions_lift(_ buf: RustBuffer) throws -> KeyPackageOptions {
+    return try FfiConverterTypeKeyPackageOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKeyPackageOptions_lower(_ value: KeyPackageOptions) -> RustBuffer {
+    return FfiConverterTypeKeyPackageOptions.lower(value)
+}
+
+
+/**
  * Result of creating a key package
  */
 public struct KeyPackageResult: Equatable, Hashable {
@@ -2703,10 +2919,12 @@ public struct KeyPackageResult: Equatable, Hashable {
      */
     public var hashRef: Data
     /**
-     * The `d` tag value (32-byte hex string) for this KeyPackage slot.
-     * Callers SHOULD store this and, when rotating, replace the generated
-     * `["d", ...]` entry in `tags` with the stored value before signing.
-     * Reusing the same `(kind, pubkey, d)` tuple lets relays replace the old event.
+     * The `d` tag value (hex string) for this KeyPackage slot.
+     *
+     * Callers SHOULD store this and, when rotating, pass it back via
+     * [`KeyPackageOptions::existing_d_tag`] so MDK emits the same `d` value
+     * directly — no need to post-edit the tag list. Reusing the same
+     * `(kind, pubkey, d)` tuple lets relays replace the old event.
      */
     public var dTag: String
 
@@ -2726,10 +2944,12 @@ public struct KeyPackageResult: Equatable, Hashable {
          * Serialized hash_ref bytes for the key package (for lifecycle tracking)
          */hashRef: Data, 
         /**
-         * The `d` tag value (32-byte hex string) for this KeyPackage slot.
-         * Callers SHOULD store this and, when rotating, replace the generated
-         * `["d", ...]` entry in `tags` with the stored value before signing.
-         * Reusing the same `(kind, pubkey, d)` tuple lets relays replace the old event.
+         * The `d` tag value (hex string) for this KeyPackage slot.
+         *
+         * Callers SHOULD store this and, when rotating, pass it back via
+         * [`KeyPackageOptions::existing_d_tag`] so MDK emits the same `d` value
+         * directly — no need to post-edit the tag list. Reusing the same
+         * `(kind, pubkey, d)` tuple lets relays replace the old event.
          */dTag: String) {
         self.keyPackage = keyPackage
         self.tags = tags
@@ -2853,6 +3073,65 @@ public func FfiConverterTypeLeafMapEntry_lift(_ buf: RustBuffer) throws -> LeafM
 #endif
 public func FfiConverterTypeLeafMapEntry_lower(_ value: LeafMapEntry) -> RustBuffer {
     return FfiConverterTypeLeafMapEntry.lower(value)
+}
+
+
+/**
+ * Per-proposal capability upgrade readiness for a group.
+ */
+public struct MdkCapabilityUpgradeStatus: Equatable, Hashable {
+    /**
+     * One entry per proposal type MDK reports through the UniFFI API.
+     */
+    public var perProposal: [MdkProposalUpgradeStatus]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * One entry per proposal type MDK reports through the UniFFI API.
+         */perProposal: [MdkProposalUpgradeStatus]) {
+        self.perProposal = perProposal
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MdkCapabilityUpgradeStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkCapabilityUpgradeStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkCapabilityUpgradeStatus {
+        return
+            try MdkCapabilityUpgradeStatus(
+                perProposal: FfiConverterSequenceTypeMdkProposalUpgradeStatus.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdkCapabilityUpgradeStatus, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeMdkProposalUpgradeStatus.write(value.perProposal, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkCapabilityUpgradeStatus_lift(_ buf: RustBuffer) throws -> MdkCapabilityUpgradeStatus {
+    return try FfiConverterTypeMdkCapabilityUpgradeStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkCapabilityUpgradeStatus_lower(_ value: MdkCapabilityUpgradeStatus) -> RustBuffer {
+    return FfiConverterTypeMdkCapabilityUpgradeStatus.lower(value)
 }
 
 
@@ -3002,6 +3281,174 @@ public func FfiConverterTypeMdkConfig_lower(_ value: MdkConfig) -> RustBuffer {
 
 
 /**
+ * Public MLS capabilities advertised by one group member's current leaf.
+ */
+public struct MdkMemberCapabilities: Equatable, Hashable {
+    /**
+     * Hex-encoded public key for this member.
+     */
+    public var member: String
+    /**
+     * Whether this member is currently a group admin.
+     */
+    public var isAdmin: Bool
+    /**
+     * Proposal types advertised by this member, deduplicated after UniFFI mirroring.
+     */
+    public var proposals: [MdkProposalType]
+    /**
+     * Raw MLS extension type registry values advertised by this member.
+     */
+    public var extensions: [UInt16]
+    /**
+     * Raw MLS ciphersuite registry values advertised by this member.
+     */
+    public var ciphersuites: [UInt16]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Hex-encoded public key for this member.
+         */member: String, 
+        /**
+         * Whether this member is currently a group admin.
+         */isAdmin: Bool, 
+        /**
+         * Proposal types advertised by this member, deduplicated after UniFFI mirroring.
+         */proposals: [MdkProposalType], 
+        /**
+         * Raw MLS extension type registry values advertised by this member.
+         */extensions: [UInt16], 
+        /**
+         * Raw MLS ciphersuite registry values advertised by this member.
+         */ciphersuites: [UInt16]) {
+        self.member = member
+        self.isAdmin = isAdmin
+        self.proposals = proposals
+        self.extensions = extensions
+        self.ciphersuites = ciphersuites
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MdkMemberCapabilities: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkMemberCapabilities: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkMemberCapabilities {
+        return
+            try MdkMemberCapabilities(
+                member: FfiConverterString.read(from: &buf), 
+                isAdmin: FfiConverterBool.read(from: &buf), 
+                proposals: FfiConverterSequenceTypeMdkProposalType.read(from: &buf), 
+                extensions: FfiConverterSequenceUInt16.read(from: &buf), 
+                ciphersuites: FfiConverterSequenceUInt16.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdkMemberCapabilities, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.member, into: &buf)
+        FfiConverterBool.write(value.isAdmin, into: &buf)
+        FfiConverterSequenceTypeMdkProposalType.write(value.proposals, into: &buf)
+        FfiConverterSequenceUInt16.write(value.extensions, into: &buf)
+        FfiConverterSequenceUInt16.write(value.ciphersuites, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkMemberCapabilities_lift(_ buf: RustBuffer) throws -> MdkMemberCapabilities {
+    return try FfiConverterTypeMdkMemberCapabilities.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkMemberCapabilities_lower(_ value: MdkMemberCapabilities) -> RustBuffer {
+    return FfiConverterTypeMdkMemberCapabilities.lower(value)
+}
+
+
+/**
+ * Upgrade readiness for one proposal type.
+ */
+public struct MdkProposalUpgradeStatus: Equatable, Hashable {
+    /**
+     * The proposal type being reported.
+     */
+    public var proposal: MdkProposalType
+    /**
+     * Whether this proposal can be added to required capabilities.
+     */
+    public var upgradability: MdkProposalUpgradability
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The proposal type being reported.
+         */proposal: MdkProposalType, 
+        /**
+         * Whether this proposal can be added to required capabilities.
+         */upgradability: MdkProposalUpgradability) {
+        self.proposal = proposal
+        self.upgradability = upgradability
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MdkProposalUpgradeStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkProposalUpgradeStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkProposalUpgradeStatus {
+        return
+            try MdkProposalUpgradeStatus(
+                proposal: FfiConverterTypeMdkProposalType.read(from: &buf), 
+                upgradability: FfiConverterTypeMdkProposalUpgradability.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdkProposalUpgradeStatus, into buf: inout [UInt8]) {
+        FfiConverterTypeMdkProposalType.write(value.proposal, into: &buf)
+        FfiConverterTypeMdkProposalUpgradability.write(value.upgradability, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalUpgradeStatus_lift(_ buf: RustBuffer) throws -> MdkProposalUpgradeStatus {
+    return try FfiConverterTypeMdkProposalUpgradeStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalUpgradeStatus_lower(_ value: MdkProposalUpgradeStatus) -> RustBuffer {
+    return FfiConverterTypeMdkProposalUpgradeStatus.lower(value)
+}
+
+
+/**
  * Options for controlling media processing during encryption
  *
  * `max_dimension`, `max_file_size`, and `max_filename_length` are optional and
@@ -3146,6 +3593,14 @@ public struct MediaReferenceRecord: Equatable, Hashable {
      */
     public var dimensions: [UInt32]?
     /**
+     * Optional audio duration in milliseconds for display purposes
+     */
+    public var durationMs: UInt64?
+    /**
+     * Optional audio waveform samples in the inclusive range 0..=100
+     */
+    public var waveform: Data?
+    /**
      * Encryption scheme version (e.g. `"mip04-v2"`)
      */
     public var schemeVersion: String
@@ -3173,6 +3628,12 @@ public struct MediaReferenceRecord: Equatable, Hashable {
          * Image dimensions `[width, height]` if the media is an image, otherwise `None`
          */dimensions: [UInt32]?, 
         /**
+         * Optional audio duration in milliseconds for display purposes
+         */durationMs: UInt64?, 
+        /**
+         * Optional audio waveform samples in the inclusive range 0..=100
+         */waveform: Data?, 
+        /**
          * Encryption scheme version (e.g. `"mip04-v2"`)
          */schemeVersion: String, 
         /**
@@ -3183,6 +3644,8 @@ public struct MediaReferenceRecord: Equatable, Hashable {
         self.mimeType = mimeType
         self.filename = filename
         self.dimensions = dimensions
+        self.durationMs = durationMs
+        self.waveform = waveform
         self.schemeVersion = schemeVersion
         self.nonce = nonce
     }
@@ -3208,6 +3671,8 @@ public struct FfiConverterTypeMediaReferenceRecord: FfiConverterRustBuffer {
                 mimeType: FfiConverterString.read(from: &buf), 
                 filename: FfiConverterString.read(from: &buf), 
                 dimensions: FfiConverterOptionSequenceUInt32.read(from: &buf), 
+                durationMs: FfiConverterOptionUInt64.read(from: &buf), 
+                waveform: FfiConverterOptionData.read(from: &buf), 
                 schemeVersion: FfiConverterString.read(from: &buf), 
                 nonce: FfiConverterData.read(from: &buf)
         )
@@ -3219,6 +3684,8 @@ public struct FfiConverterTypeMediaReferenceRecord: FfiConverterRustBuffer {
         FfiConverterString.write(value.mimeType, into: &buf)
         FfiConverterString.write(value.filename, into: &buf)
         FfiConverterOptionSequenceUInt32.write(value.dimensions, into: &buf)
+        FfiConverterOptionUInt64.write(value.durationMs, into: &buf)
+        FfiConverterOptionData.write(value.waveform, into: &buf)
         FfiConverterString.write(value.schemeVersion, into: &buf)
         FfiConverterData.write(value.nonce, into: &buf)
     }
@@ -4065,6 +4532,98 @@ public func FfiConverterTypeMdkProposalType_lower(_ value: MdkProposalType) -> R
 }
 
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * UniFFI-friendly upgrade readiness for a proposal type.
+ */
+
+public enum MdkProposalUpgradability: Equatable, Hashable {
+    
+    /**
+     * The proposal type is already required by the group.
+     */
+    case alreadyRequired
+    /**
+     * Every current member advertises this proposal type, so an admin may upgrade it.
+     */
+    case available
+    /**
+     * One or more members do not advertise this proposal type.
+     */
+    case blocked(
+        /**
+         * Hex-encoded public keys of members blocking this upgrade.
+         */blockers: [String]
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension MdkProposalUpgradability: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMdkProposalUpgradability: FfiConverterRustBuffer {
+    typealias SwiftType = MdkProposalUpgradability
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdkProposalUpgradability {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .alreadyRequired
+        
+        case 2: return .available
+        
+        case 3: return .blocked(blockers: try FfiConverterSequenceString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdkProposalUpgradability, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .alreadyRequired:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .available:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .blocked(blockers):
+            writeInt(&buf, Int32(3))
+            FfiConverterSequenceString.write(blockers, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalUpgradability_lift(_ buf: RustBuffer) throws -> MdkProposalUpgradability {
+    return try FfiConverterTypeMdkProposalUpgradability.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMdkProposalUpgradability_lower(_ value: MdkProposalUpgradability) -> RustBuffer {
+    return FfiConverterTypeMdkProposalUpgradability.lower(value)
+}
+
+
 
 /**
  * Error type for MDK UniFFI operations
@@ -4696,6 +5255,31 @@ fileprivate struct FfiConverterOptionSequenceSequenceString: FfiConverterRustBuf
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceUInt16: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt16]
+
+    public static func write(_ value: [UInt16], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt16.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt16] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt16]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt16.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
     typealias SwiftType = [UInt32]
 
@@ -4788,6 +5372,56 @@ fileprivate struct FfiConverterSequenceTypeLeafMapEntry: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeLeafMapEntry.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMdkMemberCapabilities: FfiConverterRustBuffer {
+    typealias SwiftType = [MdkMemberCapabilities]
+
+    public static func write(_ value: [MdkMemberCapabilities], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMdkMemberCapabilities.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MdkMemberCapabilities] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MdkMemberCapabilities]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMdkMemberCapabilities.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMdkProposalUpgradeStatus: FfiConverterRustBuffer {
+    typealias SwiftType = [MdkProposalUpgradeStatus]
+
+    public static func write(_ value: [MdkProposalUpgradeStatus], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMdkProposalUpgradeStatus.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MdkProposalUpgradeStatus] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MdkProposalUpgradeStatus]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMdkProposalUpgradeStatus.read(from: &buf))
         }
         return seq
     }
@@ -5099,7 +5733,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event() != 46847) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with_options() != 59356) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event_with_options() != 22774) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_media_imeta_tag() != 4917) {
@@ -5165,7 +5799,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_get_welcome() != 25012) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_group_capability_upgrade_status() != 56220) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mdk_uniffi_checksum_method_mdk_group_leaf_map() != 58304) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_group_member_capabilities() != 43344) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_group_required_proposals() != 24118) {
@@ -5220,6 +5860,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_update_group_data() != 32068) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mdk_uniffi_checksum_method_mdk_upgrade_group_capabilities() != 21210) {
         return InitializationResult.apiChecksumMismatch
     }
 

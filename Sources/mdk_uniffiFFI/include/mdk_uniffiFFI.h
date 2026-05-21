@@ -285,7 +285,7 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event(uint64_t
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT_WITH_OPTIONS
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(uint64_t ptr, RustBuffer public_key, RustBuffer relays, int8_t protected, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_key_package_for_event_with_options(uint64_t ptr, RustBuffer public_key, RustBuffer relays, RustBuffer options, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_MEDIA_IMETA_TAG
@@ -393,9 +393,19 @@ RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_relays(uint64_t ptr, RustBuffer m
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_get_welcome(uint64_t ptr, RustBuffer event_id, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_CAPABILITY_UPGRADE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_CAPABILITY_UPGRADE_STATUS
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_group_capability_upgrade_status(uint64_t ptr, RustBuffer group_id_hex, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_LEAF_MAP
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_LEAF_MAP
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_group_leaf_map(uint64_t ptr, RustBuffer group_id_hex, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_MEMBER_CAPABILITIES
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_MEMBER_CAPABILITIES
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_group_member_capabilities(uint64_t ptr, RustBuffer group_id_hex, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_GROUP_REQUIRED_PROPOSALS
@@ -486,6 +496,11 @@ void uniffi_mdk_uniffi_fn_method_mdk_sync_group_metadata_from_mls(uint64_t ptr, 
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_UPDATE_GROUP_DATA
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_UPDATE_GROUP_DATA
 RustBuffer uniffi_mdk_uniffi_fn_method_mdk_update_group_data(uint64_t ptr, RustBuffer mls_group_id, RustBuffer update, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_UPGRADE_GROUP_CAPABILITIES
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_UPGRADE_GROUP_CAPABILITIES
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_upgrade_group_capabilities(uint64_t ptr, RustBuffer group_id_hex, RustBuffer proposals_to_add, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_FUNC_DECRYPT_GROUP_IMAGE
@@ -994,9 +1009,21 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_get_welcome(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_CAPABILITY_UPGRADE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_CAPABILITY_UPGRADE_STATUS
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_group_capability_upgrade_status(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_LEAF_MAP
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_LEAF_MAP
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_group_leaf_map(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_MEMBER_CAPABILITIES
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_GROUP_MEMBER_CAPABILITIES
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_group_member_capabilities(void
     
 );
 #endif
@@ -1105,6 +1132,12 @@ uint16_t uniffi_mdk_uniffi_checksum_method_mdk_sync_group_metadata_from_mls(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_UPDATE_GROUP_DATA
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_UPDATE_GROUP_DATA
 uint16_t uniffi_mdk_uniffi_checksum_method_mdk_update_group_data(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_UPGRADE_GROUP_CAPABILITIES
+#define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_CHECKSUM_METHOD_MDK_UPGRADE_GROUP_CAPABILITIES
+uint16_t uniffi_mdk_uniffi_checksum_method_mdk_upgrade_group_capabilities(void
     
 );
 #endif
