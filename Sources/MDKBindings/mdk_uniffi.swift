@@ -588,7 +588,7 @@ public protocol MdkProtocol: AnyObject, Sendable {
     /**
      * Create a new group
      */
-    func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [String], name: String, description: String, relays: [String], admins: [String]) throws  -> CreateGroupResult
+    func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [String], name: String, description: String, relays: [String], admins: [String], disappearingMessageSecs: UInt64?) throws  -> CreateGroupResult
     
     /**
      * Create a key package for a Nostr event
@@ -1150,7 +1150,7 @@ open func clearPendingCommit(mlsGroupId: String)throws   {try rustCallWithError(
     /**
      * Create a new group
      */
-open func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [String], name: String, description: String, relays: [String], admins: [String])throws  -> CreateGroupResult  {
+open func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [String], name: String, description: String, relays: [String], admins: [String], disappearingMessageSecs: UInt64?)throws  -> CreateGroupResult  {
     return try  FfiConverterTypeCreateGroupResult_lift(try rustCallWithError(FfiConverterTypeMdkUniffiError_lift) {
     uniffi_mdk_uniffi_fn_method_mdk_create_group(
             self.uniffiCloneHandle(),
@@ -1159,7 +1159,8 @@ open func createGroup(creatorPublicKey: String, memberKeyPackageEventsJson: [Str
         FfiConverterString.lower(name),
         FfiConverterString.lower(description),
         FfiConverterSequenceString.lower(relays),
-        FfiConverterSequenceString.lower(admins),$0
+        FfiConverterSequenceString.lower(admins),
+        FfiConverterOptionUInt64.lower(disappearingMessageSecs),$0
     )
 })
 }
@@ -2310,6 +2311,10 @@ public struct Group: Equatable, Hashable {
      * - `"completed_at:<unix_timestamp>"`: Last self-update merged at this time (MIP-00).
      */
     public var selfUpdateState: String
+    /**
+     * Disappearing message duration in seconds (None = disabled, Some(n) = n seconds)
+     */
+    public var disappearingMessageSecs: UInt64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -2361,7 +2366,10 @@ public struct Group: Equatable, Hashable {
          * Self-update tracking state.
          * - `"required"`: Must perform a post-join self-update (MIP-02).
          * - `"completed_at:<unix_timestamp>"`: Last self-update merged at this time (MIP-00).
-         */selfUpdateState: String) {
+         */selfUpdateState: String, 
+        /**
+         * Disappearing message duration in seconds (None = disabled, Some(n) = n seconds)
+         */disappearingMessageSecs: UInt64?) {
         self.mlsGroupId = mlsGroupId
         self.nostrGroupId = nostrGroupId
         self.name = name
@@ -2376,6 +2384,7 @@ public struct Group: Equatable, Hashable {
         self.epoch = epoch
         self.state = state
         self.selfUpdateState = selfUpdateState
+        self.disappearingMessageSecs = disappearingMessageSecs
     }
 
     
@@ -2407,7 +2416,8 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
                 lastMessageProcessedAt: FfiConverterOptionUInt64.read(from: &buf), 
                 epoch: FfiConverterUInt64.read(from: &buf), 
                 state: FfiConverterString.read(from: &buf), 
-                selfUpdateState: FfiConverterString.read(from: &buf)
+                selfUpdateState: FfiConverterString.read(from: &buf), 
+                disappearingMessageSecs: FfiConverterOptionUInt64.read(from: &buf)
         )
     }
 
@@ -2426,6 +2436,7 @@ public struct FfiConverterTypeGroup: FfiConverterRustBuffer {
         FfiConverterUInt64.write(value.epoch, into: &buf)
         FfiConverterString.write(value.state, into: &buf)
         FfiConverterString.write(value.selfUpdateState, into: &buf)
+        FfiConverterOptionUInt64.write(value.disappearingMessageSecs, into: &buf)
     }
 }
 
@@ -2477,6 +2488,10 @@ public struct GroupDataUpdate: Equatable, Hashable {
      * Group admins (optional)
      */
     public var admins: [String]?
+    /**
+     * Disappearing message duration in seconds (optional, use Some(None) to disable)
+     */
+    public var disappearingMessageSecs: UInt64??
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -2501,7 +2516,10 @@ public struct GroupDataUpdate: Equatable, Hashable {
          */relays: [String]?, 
         /**
          * Group admins (optional)
-         */admins: [String]?) {
+         */admins: [String]?, 
+        /**
+         * Disappearing message duration in seconds (optional, use Some(None) to disable)
+         */disappearingMessageSecs: UInt64??) {
         self.name = name
         self.description = description
         self.imageHash = imageHash
@@ -2509,6 +2527,7 @@ public struct GroupDataUpdate: Equatable, Hashable {
         self.imageNonce = imageNonce
         self.relays = relays
         self.admins = admins
+        self.disappearingMessageSecs = disappearingMessageSecs
     }
 
     
@@ -2533,7 +2552,8 @@ public struct FfiConverterTypeGroupDataUpdate: FfiConverterRustBuffer {
                 imageKey: FfiConverterOptionOptionData.read(from: &buf), 
                 imageNonce: FfiConverterOptionOptionData.read(from: &buf), 
                 relays: FfiConverterOptionSequenceString.read(from: &buf), 
-                admins: FfiConverterOptionSequenceString.read(from: &buf)
+                admins: FfiConverterOptionSequenceString.read(from: &buf), 
+                disappearingMessageSecs: FfiConverterOptionOptionUInt64.read(from: &buf)
         )
     }
 
@@ -2545,6 +2565,7 @@ public struct FfiConverterTypeGroupDataUpdate: FfiConverterRustBuffer {
         FfiConverterOptionOptionData.write(value.imageNonce, into: &buf)
         FfiConverterOptionSequenceString.write(value.relays, into: &buf)
         FfiConverterOptionSequenceString.write(value.admins, into: &buf)
+        FfiConverterOptionOptionUInt64.write(value.disappearingMessageSecs, into: &buf)
     }
 }
 
@@ -5159,6 +5180,30 @@ fileprivate struct FfiConverterOptionTypeWelcome: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionOptionUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = UInt64??
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterOptionUInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterOptionUInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionOptionData: FfiConverterRustBuffer {
     typealias SwiftType = Data??
 
@@ -5727,7 +5772,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_mdk_uniffi_checksum_method_mdk_clear_pending_commit() != 50626) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mdk_uniffi_checksum_method_mdk_create_group() != 56895) {
+    if (uniffi_mdk_uniffi_checksum_method_mdk_create_group() != 47513) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mdk_uniffi_checksum_method_mdk_create_key_package_for_event() != 46847) {

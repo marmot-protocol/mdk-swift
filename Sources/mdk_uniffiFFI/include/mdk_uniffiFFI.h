@@ -275,7 +275,7 @@ void uniffi_mdk_uniffi_fn_method_mdk_clear_pending_commit(uint64_t ptr, RustBuff
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_GROUP
 #define UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_GROUP
-RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_group(uint64_t ptr, RustBuffer creator_public_key, RustBuffer member_key_package_events_json, RustBuffer name, RustBuffer description, RustBuffer relays, RustBuffer admins, RustCallStatus *_Nonnull out_status
+RustBuffer uniffi_mdk_uniffi_fn_method_mdk_create_group(uint64_t ptr, RustBuffer creator_public_key, RustBuffer member_key_package_events_json, RustBuffer name, RustBuffer description, RustBuffer relays, RustBuffer admins, RustBuffer disappearing_message_secs, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_MDK_UNIFFI_FN_METHOD_MDK_CREATE_KEY_PACKAGE_FOR_EVENT
