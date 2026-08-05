@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository is obsolete and is no longer updated. Use the Swift bindings in [marmot-protocol/mdk](https://github.com/marmot-protocol/mdk) instead.
+
 > [!NOTE]
 > This is a generic documentation, [read Swift-specific docs](docs.md).
 
